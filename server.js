@@ -240,11 +240,14 @@ app.get('/api/stats', (req, res) => {
     status: 'ok',
     loaded: true,
     overview: richStats.overview,
-    top_countries: Object.entries(richStats.countries).slice(0,5).map(([k,v])=>({country:k,...v})),
+    top_countries: Object.entries(richStats.countries)
+      .slice(0,5)
+      .map(([k,v])=>({ country:k, total:v.total, churned:v.churned, rate:v.rate })),
     genders: richStats.genders,
     age_bands: richStats.age_bands,
     ltv_segments: richStats.ltv_segments,
-    risk_factors: richStats.risk_factors.slice(0,5)
+    risk_factors: richStats.risk_factors.slice(0,5),
+    avg_metrics: richStats.metrics   // 이탈/유지 평균 비교 지표
   });
 });
 
@@ -410,6 +413,21 @@ app.post('/api/pdf', (req, res) => {
        .text(infoText, ML, 60, { width: CW, ellipsis: true });
 
     let y = 86;
+
+    // ── 차트 이미지 삽입 (있을 경우) ──
+    if (req.body.chartImage && req.body.chartTitle) {
+      const imgData = req.body.chartImage.replace(/^data:image\/png;base64,/, '');
+      const imgBuf  = Buffer.from(imgData, 'base64');
+      const imgW    = CW;
+      const imgH    = Math.round(CW * 0.55);  // 가로 비율 유지
+      if (y + imgH + 30 > PAGE_BOTTOM) { y = newPage(); }
+      // 차트 제목
+      doc.font('Bold').fontSize(11).fillColor('#1a1a2e')
+         .text(req.body.chartTitle, ML, y, { width: CW });
+      y += 18;
+      doc.image(imgBuf, ML, y, { width: imgW, height: imgH });
+      y += imgH + 14;
+    }
 
     // ── 메시지 렌더링 ──
     messages.forEach((m) => {

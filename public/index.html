@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>마케팅 AI 에이전트</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
   :root {
     --primary: #0f0c29;
@@ -275,6 +276,37 @@
     pointer-events: none;
   }
   .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  /* ─── Chart Cards ─── */
+  .chart-msg { display: flex; gap: 10px; align-items: flex-start; }
+  .chart-card {
+    max-width: 92%; background: white; border: 1px solid var(--border);
+    border-radius: 18px; border-top-left-radius: 4px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.07);
+    overflow: hidden;
+  }
+  .chart-card-header {
+    padding: 12px 16px 8px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .chart-card-title {
+    font-size: 13px; font-weight: 700; color: var(--text);
+  }
+  .chart-card-sub {
+    font-size: 11px; color: var(--text-muted); margin-top: 2px;
+  }
+  .chart-wrap {
+    padding: 4px 14px 14px; position: relative;
+  }
+  .chart-wrap canvas { width: 100% !important; }
+  .chart-pdf-btn {
+    display: inline-flex; align-items: center; gap: 5px;
+    background: #f8f9ff; border: 1px solid #d8e2ff;
+    border-radius: 16px; padding: 5px 13px; font-size: 11px;
+    color: var(--accent); cursor: pointer; margin: 0 14px 12px;
+    transition: background 0.14s; flex-shrink: 0;
+  }
+  .chart-pdf-btn:active { background: #eef2ff; }
 </style>
 </head>
 <body>
@@ -455,6 +487,18 @@ const TX = {
 const CHIPS = {
   ko:['📊 고객 분포 현황','⚠️ 이탈 위험 요인','🎯 고객 세그먼트','💡 마케팅 전략 제안','🏆 VIP 고객 프로파일','📈 국가별 이탈률','🛒 구매 패턴 분석','📧 이메일 캠페인 최적화'],
   en:['📊 Customer Distribution','⚠️ Churn Risk Factors','🎯 Customer Segments','💡 Marketing Strategy','🏆 VIP Customer Profile','📈 Churn by Country','🛒 Purchase Pattern','📧 Email Campaign Optimization'],
+};
+
+// 칩 인덱스 → 차트 렌더 함수 매핑
+const CHIP_CHART_MAP = {
+  0: drawCustomerDistributionChart,   // 고객 분포 현황
+  1: drawChurnRiskChart,              // 이탈 위험 요인
+  2: drawSegmentChart,                // 고객 세그먼트
+  3: null,                            // 마케팅 전략 — 텍스트 전용
+  4: drawVIPChart,                    // VIP 고객 프로파일
+  5: drawCountryChurnChart,           // 국가별 이탈률
+  6: drawPurchasePatternChart,        // 구매 패턴 분석
+  7: null,                            // 이메일 캠페인 — 텍스트 전용
 };
 
 function applyLang() {
@@ -719,11 +763,53 @@ async function fetchServerStats() {
 
 // ═══ CHAT ═══
 function sendChip(t) {
-  // Find chip index in current language list to track across languages
   const idx = CHIPS[lang].findIndex(c => c === t);
-  if(idx !== -1) usedChips.add(idx);
+  if(idx !== -1) {
+    usedChips.add(idx);
+    // 차트가 있는 칩이면 즉시 차트 렌더 후 AI 분석 병행
+    const chartFn = CHIP_CHART_MAP[idx];
+    if(chartFn && serverStats) {
+      renderChipWithChart(t, idx, chartFn);
+      return;
+    }
+  }
   document.getElementById('ti').value = t;
   send();
+}
+
+async function renderChipWithChart(chipText, chipIdx, chartFn) {
+  // 1) 사용자 메시지 표시
+  appendMsg('user', chipText);
+  history.push({role:'user', content: chipText});
+  allMsgs.push({role:'user', text: chipText});
+
+  // 2) 차트 즉시 렌더 (토큰 소모 없음)
+  const chartId = 'chart_' + Date.now();
+  appendChartMsg(chartId, chipIdx);
+  setTimeout(() => chartFn(chartId), 80);
+
+  // 3) AI 텍스트 분석 병렬 호출
+  const typing = appendTyping();
+  scrollBottom();
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/chat`, {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ messages: history, apiKey, lang })
+    });
+    const data = await res.json();
+    typing.remove();
+    if(!res.ok) throw new Error(data.error||'Server error');
+    const reply = data.content;
+    appendMsg('ai', reply, true);
+    history.push({role:'assistant', content: reply});
+    allMsgs.push({role:'ai', text: reply});
+    renderChips();
+  } catch(e) {
+    typing.remove();
+    appendMsg('ai', '❌ ' + e.message);
+  }
+  scrollBottom();
 }
 function onKey(e) { if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();send();} }
 function resize(el) { el.style.height='auto'; el.style.height=Math.min(el.scrollHeight,100)+'px'; }
@@ -799,6 +885,234 @@ function scrollBottom() {
   setTimeout(()=>c.scrollTop=c.scrollHeight,80);
 }
 
+
+// ═══ CHART RENDERING (Chart.js, /api/stats 데이터 활용) ═══
+
+const CHART_META = {
+  ko: {
+    0: { title:'고객 분포 현황',    sub:'성별 · 이탈/유지 · 가입 분기' },
+    1: { title:'이탈 위험 요인',    sub:'이탈 vs 유지 고객 주요 지표 비교' },
+    2: { title:'고객 세그먼트',     sub:'연령대별 분포 및 이탈률' },
+    4: { title:'VIP 고객 프로파일', sub:'LTV 구간별 분포' },
+    5: { title:'국가별 이탈률',     sub:'상위 5개국 이탈률 비교' },
+    6: { title:'구매 패턴 분석',    sub:'이탈 vs 유지 고객 구매 행동 비교' },
+  },
+  en: {
+    0: { title:'Customer Distribution',  sub:'Gender · Churn/Active · Signup Quarter' },
+    1: { title:'Churn Risk Factors',     sub:'Key metrics: Churned vs Active' },
+    2: { title:'Customer Segments',      sub:'Age band distribution & churn rate' },
+    4: { title:'VIP Customer Profile',   sub:'LTV segment distribution' },
+    5: { title:'Churn by Country',       sub:'Top 5 countries churn rate' },
+    6: { title:'Purchase Pattern',       sub:'Churned vs Active buyer behavior' },
+  }
+};
+
+function appendChartMsg(chartId, chipIdx) {
+  const chat = document.getElementById('chat');
+  const meta = (CHART_META[lang] || CHART_META.ko)[chipIdx] || {title:'차트', sub:''};
+  const div = document.createElement('div');
+  div.className = 'chart-msg';
+  div.innerHTML = `
+    <div class="av ai">
+      <svg viewBox="0 0 40 40" fill="none">
+        <path d="M20 4L4 12l16 8 16-8z" fill="white"/>
+        <path d="M4 26l16 8 16-8" stroke="white" stroke-width="2" fill="none"/>
+        <path d="M4 20l16 8 16-8" stroke="white" stroke-width="2" fill="none"/>
+      </svg>
+    </div>
+    <div class="chart-card">
+      <div class="chart-card-header">
+        <div>
+          <div class="chart-card-title">${meta.title}</div>
+          <div class="chart-card-sub">${meta.sub}</div>
+        </div>
+      </div>
+      <div class="chart-wrap">
+        <canvas id="${chartId}" height="220"></canvas>
+      </div>
+      <button class="chart-pdf-btn" onclick="saveChartPDF('${chartId}','${meta.title}')">📄 ${lang==='ko'?'PDF 저장':'Save PDF'}</button>
+    </div>`;
+  chat.appendChild(div);
+  return div;
+}
+
+// 공통 Chart.js 옵션
+const BASE_OPTS = {
+  responsive: true,
+  maintainAspectRatio: true,
+  plugins: {
+    legend: { position:'bottom', labels:{ boxWidth:12, font:{size:11} } },
+    tooltip: { callbacks: { label: ctx => ` ${ctx.formattedValue}` } }
+  },
+  scales: {}
+};
+
+function mkBar(ctx, labels, datasets, opts={}) {
+  return new Chart(ctx, {
+    type: 'bar',
+    data: { labels, datasets },
+    options: {
+      ...BASE_OPTS, ...opts,
+      scales: { y:{ beginAtZero:true, grid:{color:'#f0f0f0'}, ticks:{font:{size:10}} },
+                x:{ grid:{display:false}, ticks:{font:{size:10}} } }
+    }
+  });
+}
+function mkDoughnut(ctx, labels, data, colors) {
+  return new Chart(ctx, {
+    type: 'doughnut',
+    data: { labels, datasets:[{ data, backgroundColor:colors, borderWidth:2, borderColor:'#fff' }] },
+    options: { ...BASE_OPTS, cutout:'62%' }
+  });
+}
+function mkHBar(ctx, labels, datasets) {
+  return new Chart(ctx, {
+    type: 'bar',
+    data: { labels, datasets },
+    options: {
+      ...BASE_OPTS,
+      indexAxis: 'y',
+      scales: { x:{ beginAtZero:true, grid:{color:'#f0f0f0'}, ticks:{font:{size:10}} },
+                y:{ grid:{display:false}, ticks:{font:{size:10}} } }
+    }
+  });
+}
+
+// ── 0. 고객 분포 현황 ──
+function drawCustomerDistributionChart(chartId) {
+  const s = serverStats;
+  const ctx = document.getElementById(chartId).getContext('2d');
+  const isKo = lang==='ko';
+  const g = s.genders;
+  const gKeys = Object.keys(g);
+  mkDoughnut(ctx,
+    gKeys.map(k => isKo
+      ? (k==='Male'?'남성':k==='Female'?'여성':'기타')
+      : k),
+    gKeys.map(k => g[k].total),
+    ['#4f8ef7','#f472b6','#a78bfa']
+  );
+}
+
+// ── 1. 이탈 위험 요인 ──
+function drawChurnRiskChart(chartId) {
+  const s = serverStats;
+  const ctx = document.getElementById(chartId).getContext('2d');
+  const isKo = lang==='ko';
+  // top risk factors from server
+  const rf = s.risk_factors || [];
+  const labels = rf.map(f => {
+    const map = {
+      Cart_Abandonment_Rate: isKo?'장바구니이탈':'Cart Abandon',
+      Days_Since_Last_Purchase: isKo?'마지막구매경과일':'Days Since Buy',
+      Email_Open_Rate: isKo?'이메일오픈율':'Email Open',
+      Login_Frequency: isKo?'로그인빈도':'Login Freq',
+      Customer_Service_Calls: isKo?'CS문의':'CS Calls',
+      Mobile_App_Usage: isKo?'앱사용':'App Usage',
+      Discount_Usage_Rate: isKo?'할인사용률':'Discount',
+      Returns_Rate: isKo?'반품률':'Returns',
+    };
+    return map[f.col] || f.col;
+  });
+  mkBar(ctx, labels, [
+    { label: isKo?'이탈고객':'Churned', data: rf.map(f=>f.churned), backgroundColor:'rgba(239,68,68,0.75)', borderRadius:4 },
+    { label: isKo?'유지고객':'Active',  data: rf.map(f=>f.active),  backgroundColor:'rgba(79,142,247,0.75)', borderRadius:4 }
+  ]);
+}
+
+// ── 2. 고객 세그먼트 (연령대별) ──
+function drawSegmentChart(chartId) {
+  const s = serverStats;
+  const ctx = document.getElementById(chartId).getContext('2d');
+  const isKo = lang==='ko';
+  const ab = s.age_bands;
+  const bands = Object.keys(ab);
+  mkBar(ctx, bands, [
+    { label: isKo?'고객 수':'Count',    data: bands.map(b=>ab[b].t),    backgroundColor:'rgba(79,142,247,0.7)',  borderRadius:4, yAxisID:'y' },
+    { label: isKo?'이탈률(%)':'Churn%', data: bands.map(b=>ab[b].rate), backgroundColor:'rgba(239,68,68,0.8)',   borderRadius:4, yAxisID:'y1', type:'line', fill:false, borderColor:'#ef4444', borderWidth:2, pointRadius:4 }
+  ], {
+    scales: {
+      y:  { beginAtZero:true, position:'left',  grid:{color:'#f0f0f0'}, ticks:{font:{size:10}}, title:{display:true, text:isKo?'고객 수':'Count', font:{size:10}} },
+      y1: { beginAtZero:true, position:'right', grid:{drawOnChartArea:false}, ticks:{font:{size:10}, callback:v=>v+'%'}, title:{display:true, text:'%', font:{size:10}} },
+      x:  { grid:{display:false}, ticks:{font:{size:10}} }
+    }
+  });
+}
+
+// ── 4. VIP 고객 (LTV 구간) ──
+function drawVIPChart(chartId) {
+  const s = serverStats;
+  const ctx = document.getElementById(chartId).getContext('2d');
+  const isKo = lang==='ko';
+  const ltv = s.ltv_segments;
+  mkDoughnut(ctx,
+    [isKo?`하위($${ltv.p25}이하)`:`Low(<$${ltv.p25})`,
+     isKo?`중간($${ltv.p25}~$${ltv.p75})`:`Mid($${ltv.p25}-$${ltv.p75})`,
+     isKo?`상위($${ltv.p75}이상)`:`High(>$${ltv.p75})`],
+    [ltv.low, ltv.mid, ltv.high],
+    ['#f87171','#fbbf24','#34d399']
+  );
+}
+
+// ── 5. 국가별 이탈률 ──
+function drawCountryChurnChart(chartId) {
+  const s = serverStats;
+  const ctx = document.getElementById(chartId).getContext('2d');
+  const isKo = lang==='ko';
+  const tc = s.top_countries || [];
+  mkHBar(ctx,
+    tc.map(c=>c.country),
+    [{ label: isKo?'이탈률(%)':'Churn Rate(%)',
+       data: tc.map(c=>c.rate),
+       backgroundColor: tc.map(c=>
+         c.rate>32?'rgba(239,68,68,0.75)':c.rate>28?'rgba(251,191,36,0.75)':'rgba(79,142,247,0.75)'
+       ),
+       borderRadius:4 }]
+  );
+}
+
+// ── 6. 구매 패턴 분석 ──
+function drawPurchasePatternChart(chartId) {
+  const s = serverStats;
+  const ctx = document.getElementById(chartId).getContext('2d');
+  const isKo = lang==='ko';
+  // radar-style comparison using bar
+  const metrics = s.avg_metrics || {};
+  const cols = ['Total_Purchases','Average_Order_Value','Days_Since_Last_Purchase','Discount_Usage_Rate','Returns_Rate'];
+  const labels = isKo
+    ? ['총구매횟수','평균주문액','마지막구매일','할인사용률','반품률']
+    : ['Total Buys','Avg Order','Days Since','Discount','Returns'];
+  mkBar(ctx, labels, [
+    { label:isKo?'이탈고객':'Churned', data:cols.map(c=>metrics[c]?metrics[c].churned:0), backgroundColor:'rgba(239,68,68,0.72)', borderRadius:4 },
+    { label:isKo?'유지고객':'Active',  data:cols.map(c=>metrics[c]?metrics[c].active:0),  backgroundColor:'rgba(79,142,247,0.72)', borderRadius:4 }
+  ]);
+}
+
+// ── 차트 → PDF 저장 ──
+async function saveChartPDF(chartId, title) {
+  const canvas = document.getElementById(chartId);
+  if(!canvas) { showToast('차트를 찾을 수 없습니다'); return; }
+  const imgData = canvas.toDataURL('image/png');
+  const msgs = [{ role:'ai', text:`[차트: ${title}]\n\n차트 이미지가 PDF에 포함됩니다.` }];
+  const statsPayload = serverStats ? { total: serverStats.overview.total, churn_rate: serverStats.overview.churn_rate } : null;
+
+  showToast(lang==='ko'?'⏳ PDF 생성 중...':'⏳ Generating PDF...');
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/pdf`, {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ messages: msgs, lang, stats: statsPayload, chartImage: imgData, chartTitle: title })
+    });
+    if(!res.ok) throw new Error('PDF error');
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `chart_${Date.now()}.pdf`;
+    document.body.appendChild(a); a.click();
+    setTimeout(()=>{ URL.revokeObjectURL(url); a.remove(); }, 1000);
+    showToast(lang==='ko'?'✓ PDF 저장 완료':'✓ PDF saved');
+  } catch(e) { showToast('PDF 오류: '+e.message); }
+}
 // ═══ PDF ═══
 function exportAllPDF() {
   if(!allMsgs.length){ showToast(lang==='ko'?'저장할 대화가 없습니다':'No conversation yet'); return; }
