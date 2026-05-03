@@ -263,7 +263,7 @@ app.post('/api/chat', async (req, res) => {
     const systemPrompt = buildSystemPrompt(lang);
 
     const response = await client.messages.create({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-sonnet-4-5',
       max_tokens: 1000,
       system: systemPrompt,
       messages: messages.slice(-20)
