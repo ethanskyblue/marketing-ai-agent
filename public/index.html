@@ -180,8 +180,7 @@
     cursor: pointer; padding: 2px 0 6px; user-select: none;
   }
   .chips-label { font-size: 11px; color: var(--text-muted); font-weight: 600; letter-spacing: 0.3px; }
-  .chips-arrow { font-size: 11px; color: var(--text-muted); transition: transform 0.2s; }
-  .chips-tray.collapsed .chips-arrow { transform: rotate(180deg); }
+  .chips-arrow { font-size: 13px; color: var(--text-muted); transition: color 0.15s; }
   .chips-body { overflow: hidden; transition: max-height 0.25s ease; max-height: 120px; }
   .chips-tray.collapsed .chips-body { max-height: 0; }
   .chips { display: flex; flex-wrap: wrap; gap: 6px; padding-bottom: 4px; }
@@ -417,7 +416,7 @@
   <div class="chips-tray" id="chipsTray">
     <div class="chips-tray-toggle" onclick="toggleChipsTray()">
       <span class="chips-label" id="chipsLabel">📊 빠른 분석</span>
-      <span class="chips-arrow" id="chipsArrow">▲</span>
+      <span class="chips-arrow" id="chipsArrow">▼</span>
     </div>
     <div class="chips-body" id="chipsBody">
       <div class="chips" id="chips"></div>
@@ -524,8 +523,13 @@ function renderChips() {
 }
 
 function toggleChipsTray() {
-  const tray = document.getElementById('chipsTray');
+  const tray   = document.getElementById('chipsTray');
+  const arrow  = document.getElementById('chipsArrow');
+  const isNowCollapsed = !tray.classList.contains('collapsed');
   tray.classList.toggle('collapsed');
+  // 펼쳐진 상태 → ▼ (누르면 접힌다는 의미)
+  // 접힌 상태    → ▲ (누르면 펼쳐진다는 의미)
+  arrow.textContent = isNowCollapsed ? '▲' : '▼';
 }
 
 // ═══ FINGERPRINT AUTH (WebAuthn — 실제 기기 지문/Face ID) ═══
@@ -947,35 +951,65 @@ const BASE_OPTS = {
   scales: {}
 };
 
+// Chart 인스턴스를 registry에 등록하고 animation 완료를 추적
+function regChart(canvasId, inst) {
+  inst._animating = true;
+  chartRegistry[canvasId] = inst;
+  // 750ms 후 강제 완료 처리 (onComplete가 누락되는 경우 대비)
+  setTimeout(() => { inst._animating = false; }, 800);
+  return inst;
+}
+
 function mkBar(ctx, labels, datasets, opts={}) {
-  return new Chart(ctx, {
+  const id = ctx.canvas.id;
+  const inst = new Chart(ctx, {
     type: 'bar',
     data: { labels, datasets },
     options: {
       ...BASE_OPTS, ...opts,
+      animation: {
+        duration: 600,
+        onComplete: () => { if(chartRegistry[id]) chartRegistry[id]._animating = false; }
+      },
       scales: { y:{ beginAtZero:true, grid:{color:'#f0f0f0'}, ticks:{font:{size:10}} },
                 x:{ grid:{display:false}, ticks:{font:{size:10}} } }
     }
   });
+  return regChart(id, inst);
 }
 function mkDoughnut(ctx, labels, data, colors) {
-  return new Chart(ctx, {
+  const id = ctx.canvas.id;
+  const inst = new Chart(ctx, {
     type: 'doughnut',
     data: { labels, datasets:[{ data, backgroundColor:colors, borderWidth:2, borderColor:'#fff' }] },
-    options: { ...BASE_OPTS, cutout:'62%' }
+    options: {
+      ...BASE_OPTS,
+      animation: {
+        duration: 600,
+        onComplete: () => { if(chartRegistry[id]) chartRegistry[id]._animating = false; }
+      },
+      cutout: '62%'
+    }
   });
+  return regChart(id, inst);
 }
 function mkHBar(ctx, labels, datasets) {
-  return new Chart(ctx, {
+  const id = ctx.canvas.id;
+  const inst = new Chart(ctx, {
     type: 'bar',
     data: { labels, datasets },
     options: {
       ...BASE_OPTS,
+      animation: {
+        duration: 600,
+        onComplete: () => { if(chartRegistry[id]) chartRegistry[id]._animating = false; }
+      },
       indexAxis: 'y',
       scales: { x:{ beginAtZero:true, grid:{color:'#f0f0f0'}, ticks:{font:{size:10}} },
                 y:{ grid:{display:false}, ticks:{font:{size:10}} } }
     }
   });
+  return regChart(id, inst);
 }
 
 // ── 0. 고객 분포 현황 ──
@@ -1089,21 +1123,57 @@ function drawPurchasePatternChart(chartId) {
 }
 
 // ── 차트 → PDF 저장 ──
+// Chart.js 인스턴스를 저장해두는 맵 (애니메이션 완료 후 캡처용)
+const chartRegistry = {};
+
 async function saveChartPDF(chartId, title) {
   const canvas = document.getElementById(chartId);
-  if(!canvas) { showToast('차트를 찾을 수 없습니다'); return; }
-  const imgData = canvas.toDataURL('image/png');
-  const msgs = [{ role:'ai', text:`[차트: ${title}]\n\n차트 이미지가 PDF에 포함됩니다.` }];
-  const statsPayload = serverStats ? { total: serverStats.overview.total, churn_rate: serverStats.overview.churn_rate } : null;
+  if(!canvas) { showToast(lang==='ko'?'차트를 찾을 수 없습니다':'Chart not found'); return; }
 
   showToast(lang==='ko'?'⏳ PDF 생성 중...':'⏳ Generating PDF...');
+
+  // Chart.js 애니메이션이 끝났는지 확인 후 캡처
+  // chartRegistry에 저장된 인스턴스를 통해 완료 여부 확인
+  const captureImage = () => new Promise(resolve => {
+    const chartInst = chartRegistry[chartId];
+    const stillAnimating = chartInst && chartInst._animating;
+    // 애니메이션 중이면 완료될 때까지 최대 1.2초 대기
+    const delay = stillAnimating ? 900 : 0;
+    setTimeout(() => {
+      // animation: false 옵션으로 즉시 완전 렌더링 후 캡처
+      if (chartInst) chartInst.draw();
+      resolve(canvas.toDataURL('image/png', 1.0));
+    }, delay);
+  });
+
   try {
+    const imgData = await captureImage();
+
+    // base64 데이터 유효성 확인
+    const base64Part = imgData.replace(/^data:image\/png;base64,/, '');
+    if (!base64Part || base64Part.length < 100) {
+      throw new Error(lang==='ko'?'차트 이미지 캡처 실패. 잠시 후 다시 시도하세요.':'Chart capture failed. Try again in a moment.');
+    }
+
+    const statsPayload = serverStats
+      ? { total: serverStats.overview.total, churn_rate: serverStats.overview.churn_rate }
+      : null;
+
     const res = await fetch(`${BACKEND_URL}/api/pdf`, {
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ messages: msgs, lang, stats: statsPayload, chartImage: imgData, chartTitle: title })
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        messages: [],           // 차트 전용 PDF는 텍스트 메시지 없음
+        lang,
+        stats: statsPayload,
+        chartImage: imgData,
+        chartTitle: title
+      })
     });
-    if(!res.ok) throw new Error('PDF error');
+    if(!res.ok) {
+      const err = await res.json().catch(()=>({}));
+      throw new Error(err.error || 'PDF 생성 오류');
+    }
     const blob = await res.blob();
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -1111,7 +1181,7 @@ async function saveChartPDF(chartId, title) {
     document.body.appendChild(a); a.click();
     setTimeout(()=>{ URL.revokeObjectURL(url); a.remove(); }, 1000);
     showToast(lang==='ko'?'✓ PDF 저장 완료':'✓ PDF saved');
-  } catch(e) { showToast('PDF 오류: '+e.message); }
+  } catch(e) { showToast((lang==='ko'?'PDF 오류: ':'PDF error: ') + e.message); }
 }
 // ═══ PDF ═══
 function exportAllPDF() {

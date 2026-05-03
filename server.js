@@ -10,7 +10,7 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.use(cors());
-app.use(express.json({ limit: '10mb' }));
+app.use(express.json({ limit: '25mb' }));  // 차트 base64 이미지 포함 가능 크기
 app.use(express.static(path.join(__dirname, 'public')));
 
 // ─── Load & parse CSV once at startup ───────────────────────────────────────
@@ -353,7 +353,8 @@ app.post('/api/query', (req, res) => {
 // ─── PDF Generation (Korean font support) ─────────────────────────────────
 app.post('/api/pdf', (req, res) => {
   const { messages = [], lang = 'ko', stats } = req.body;
-  if (!messages.length) return res.status(400).json({ error: 'No messages' });
+  // 메시지 또는 차트 이미지 중 하나는 있어야 함
+  if (!messages.length && !req.body.chartImage) return res.status(400).json({ error: 'No content' });
 
   try {
     const fontRegular = path.join(__dirname, 'fonts', 'NanumGothic.ttf');
