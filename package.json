@@ -8,10 +8,11 @@
     "dev": "node server.js"
   },
   "dependencies": {
-    "express": "^4.18.2",
+    "@anthropic-ai/sdk": "^0.24.3",
     "cors": "^2.8.5",
     "csv-parse": "^5.5.2",
-    "@anthropic-ai/sdk": "^0.24.3"
+    "express": "^4.18.2",
+    "pdfkit": "^0.18.0"
   },
   "engines": {
     "node": ">=18.0.0"
