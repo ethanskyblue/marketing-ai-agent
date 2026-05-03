@@ -1,0 +1,19 @@
+{
+  "name": "marketing-ai-agent",
+  "version": "1.0.0",
+  "description": "Marketing AI Agent - E-Commerce Customer Analytics",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "csv-parse": "^5.5.2",
+    "@anthropic-ai/sdk": "^0.24.3"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

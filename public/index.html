@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>마케팅 AI 에이전트</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+  :root {
+    --primary: #0f0c29;
+    --accent: #4f8ef7;
+    --accent2: #7c5cbf;
+    --surface: #f6f7fb;
+    --card: #ffffff;
+    --text: #1a1a2e;
+    --text-muted: #6b7280;
+    --border: #e5e7eb;
+    --success: #22c55e;
+    --danger: #ef4444;
+    --warning: #f59e0b;
+    --radius: 16px;
+    --radius-sm: 10px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  body { font-family: 'Segoe UI', 'Nanum Gothic', 'Apple SD Gothic Neo', sans-serif;
+         background: var(--surface); color: var(--text); min-height: 100vh; overflow-x: hidden; }
+
+  /* ─── LOCK SCREEN ─── */
+  #lockScreen {
+    position: fixed; inset: 0; z-index: 1000;
+    background: radial-gradient(ellipse at 30% 20%, #1a1060 0%, #0d0a2e 40%, #050314 100%);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+  }
+  .stars { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
+  .star { position: absolute; border-radius: 50%; background: white; animation: twinkle var(--d,3s) infinite var(--dl,0s); }
+  @keyframes twinkle { 0%,100%{opacity:.15} 50%{opacity:.9} }
+
+  .lock-header { text-align: center; margin-bottom: 44px; z-index: 1; }
+  .lock-logo {
+    width: 76px; height: 76px; border-radius: 22px; margin: 0 auto 18px;
+    background: linear-gradient(135deg, #4f8ef7 0%, #7c5cbf 100%);
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 0 48px rgba(79,142,247,0.45), 0 0 0 1px rgba(255,255,255,0.1);
+  }
+  .lock-logo svg { width: 40px; height: 40px; }
+  .lock-title { font-size: 23px; font-weight: 700; color: #fff; letter-spacing: 0.3px; }
+  .lock-sub { font-size: 13px; color: rgba(255,255,255,0.45); margin-top: 6px; }
+
+  /* Fingerprint */
+  .fp-wrap { z-index: 1; display: flex; flex-direction: column; align-items: center; gap: 22px; }
+  .fp-btn {
+    width: 148px; height: 148px; position: relative;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; border: none; background: none; padding: 0;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .fp-ring {
+    position: absolute; border-radius: 50%;
+    border: 1.5px solid rgba(79,142,247,0.35);
+    animation: pulse 2.8s ease-in-out infinite;
+  }
+  .fp-ring:nth-child(1) { inset: 0; }
+  .fp-ring:nth-child(2) { inset: -14px; border-color: rgba(79,142,247,0.18); animation-delay: 0.6s; }
+  .fp-ring:nth-child(3) { inset: -28px; border-color: rgba(79,142,247,0.09); animation-delay: 1.2s; }
+  @keyframes pulse { 0%,100%{transform:scale(1);opacity:.5} 50%{transform:scale(1.04);opacity:1} }
+
+  .fp-icon { position: relative; z-index: 1; }
+  .fp-icon svg { width: 92px; height: 92px; transition: transform 0.18s; }
+  .fp-btn:active .fp-icon svg { transform: scale(0.93); }
+
+  /* scanning state */
+  .fp-btn.scanning .fp-ring { border-color: rgba(79,142,247,0.9); animation-duration: 0.7s; }
+  .fp-btn.scanning .fp-stroke { stroke: #4f8ef7 !important; animation: drawStroke 1.1s ease-in-out forwards; }
+  @keyframes drawStroke { from{stroke-dashoffset:300} to{stroke-dashoffset:0} }
+
+  /* success state */
+  .fp-btn.success .fp-stroke { stroke: #22c55e !important; }
+  .fp-btn.success .fp-ring { border-color: rgba(34,197,94,0.85); }
+
+  .fp-label { font-size: 14px; color: rgba(255,255,255,0.65); text-align: center; line-height: 1.7; }
+  .fp-status { height: 26px; font-size: 13px; color: rgba(255,255,255,0.5); z-index: 1; }
+  .fp-status.scanning { color: #4f8ef7; }
+  .fp-status.success  { color: #22c55e; }
+  .fp-status.error    { color: #ef4444; }
+
+  .reset-api-btn {
+    z-index: 1; margin-top: 18px;
+    background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.14);
+    color: rgba(255,255,255,0.55); padding: 11px 28px; border-radius: 30px;
+    font-size: 13px; cursor: pointer; transition: all 0.2s; backdrop-filter: blur(8px);
+  }
+  .reset-api-btn:active { background: rgba(255,255,255,0.14); color: white; }
+
+  .lang-btn-lock {
+    position: absolute; top: 18px; right: 18px; z-index: 10;
+    background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.18);
+    color: rgba(255,255,255,0.7); padding: 7px 16px;
+    border-radius: 20px; font-size: 12px; cursor: pointer; font-weight: 500;
+  }
+
+  /* ─── API MODAL ─── */
+  .overlay {
+    position: fixed; inset: 0; z-index: 2000;
+    background: rgba(0,0,0,0.65); backdrop-filter: blur(6px);
+    display: flex; align-items: flex-end; justify-content: center;
+    opacity: 0; pointer-events: none; transition: opacity 0.28s;
+  }
+  .overlay.open { opacity: 1; pointer-events: all; }
+  .sheet {
+    background: white; border-radius: 24px 24px 0 0;
+    padding: 26px 22px 44px; width: 100%; max-width: 480px;
+    transform: translateY(100%); transition: transform 0.32s cubic-bezier(.25,.46,.45,.94);
+  }
+  .overlay.open .sheet { transform: translateY(0); }
+  .sheet-handle { width: 38px; height: 4px; background: #e5e7eb; border-radius: 2px; margin: 0 auto 22px; }
+  .sheet-title { font-size: 18px; font-weight: 700; margin-bottom: 8px; }
+  .sheet-desc { font-size: 13px; color: #6b7280; line-height: 1.6; margin-bottom: 20px; }
+  .api-field {
+    width: 100%; padding: 14px 16px; border: 1.5px solid #e5e7eb;
+    border-radius: 12px; font-size: 14px; font-family: monospace;
+    outline: none; transition: border-color 0.2s; color: #1a1a2e;
+    background: #fafafa;
+  }
+  .api-field:focus { border-color: #4f8ef7; background: white; }
+  .api-save-btn {
+    width: 100%; margin-top: 14px; padding: 15px;
+    background: linear-gradient(135deg, #4f8ef7, #7c5cbf);
+    border: none; border-radius: 14px; color: white;
+    font-size: 16px; font-weight: 600; cursor: pointer; transition: opacity 0.2s;
+  }
+  .api-save-btn:active { opacity: 0.85; }
+
+  /* ─── MAIN APP ─── */
+  #mainApp { display: none; flex-direction: column; height: 100vh; }
+
+  .app-bar {
+    background: white; border-bottom: 1px solid var(--border);
+    padding: 10px 14px; display: flex; align-items: center; gap: 10px;
+    position: sticky; top: 0; z-index: 100;
+    box-shadow: 0 1px 10px rgba(0,0,0,0.06);
+  }
+  .app-icon {
+    width: 38px; height: 38px; border-radius: 11px; flex-shrink: 0;
+    background: linear-gradient(135deg, #4f8ef7, #7c5cbf);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .app-icon svg { width: 22px; height: 22px; }
+  .app-title-block { flex: 1; min-width: 0; }
+  .app-title { font-size: 15px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .app-sub { font-size: 11px; color: var(--text-muted); }
+  .data-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--success); margin-right: 4px; animation: blink 2s infinite; }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.35} }
+  .hbtn { width: 36px; height: 36px; border-radius: 10px; border: 1px solid var(--border); background: white; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 17px; transition: background 0.15s; flex-shrink: 0; }
+  .hbtn:active { background: var(--surface); }
+
+  /* chat */
+  .chat { flex: 1; overflow-y: auto; padding: 14px 14px 90px; display: flex; flex-direction: column; gap: 12px; scroll-behavior: smooth; }
+
+  /* welcome */
+  .welcome {
+    background: linear-gradient(135deg, #4f8ef7, #7c5cbf);
+    border-radius: 18px; padding: 20px; color: white; margin-bottom: 4px;
+  }
+  .welcome h2 { font-size: 18px; font-weight: 700; margin-bottom: 6px; }
+  .welcome p { font-size: 13px; opacity: 0.88; line-height: 1.55; }
+  .data-badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: rgba(255,255,255,0.18); border-radius: 20px;
+    padding: 5px 12px; font-size: 12px; margin-top: 12px;
+  }
+
+  /* chips */
+  .chips-section { padding-bottom: 4px; }
+  .chips-label { font-size: 12px; color: var(--text-muted); font-weight: 500; margin-bottom: 10px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip {
+    background: white; border: 1px solid var(--border); border-radius: 22px;
+    padding: 8px 14px; font-size: 13px; color: var(--accent); cursor: pointer;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.05); transition: all 0.14s;
+  }
+  .chip:active { background: #eef3ff; transform: scale(0.97); }
+
+  /* messages */
+  .msg { display: flex; gap: 10px; align-items: flex-start; }
+  .msg.user { flex-direction: row-reverse; }
+  .av {
+    width: 32px; height: 32px; border-radius: 50%; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center; font-size: 13px;
+  }
+  .av.ai { background: linear-gradient(135deg,#4f8ef7,#7c5cbf); }
+  .av.ai svg { width: 16px; height: 16px; fill: white; }
+  .av.user { background: #f0f0f0; }
+  .bbl {
+    max-width: 82%; padding: 12px 15px; border-radius: 18px; font-size: 14px; line-height: 1.65;
+  }
+  .msg.ai .bbl {
+    background: white; border: 1px solid var(--border);
+    border-top-left-radius: 4px; color: var(--text);
+    box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+  }
+  .msg.user .bbl {
+    background: linear-gradient(135deg,#4f8ef7,#7c5cbf);
+    color: white; border-top-right-radius: 4px;
+  }
+  .bbl strong { font-weight: 600; }
+  .bbl .follow-btn {
+    display: inline-block; background: #f0f4ff; border: 1px solid #d0deff;
+    border-radius: 16px; padding: 5px 12px; font-size: 12px; color: var(--accent);
+    cursor: pointer; margin: 3px 2px 0; transition: background 0.14s;
+  }
+  .bbl .follow-btn:active { background: #dde8ff; }
+
+  /* typing */
+  .typing { display: flex; align-items: center; gap: 5px; padding: 4px 0; }
+  .dot { width: 7px; height: 7px; border-radius: 50%; background: #cbd5e1; animation: bounce 1.3s infinite; }
+  .dot:nth-child(2){animation-delay:.2s} .dot:nth-child(3){animation-delay:.4s}
+  @keyframes bounce { 0%,80%,100%{transform:translateY(0)} 40%{transform:translateY(-7px)} }
+
+  /* input */
+  .input-bar {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    background: white; border-top: 1px solid var(--border);
+    padding: 10px 12px; display: flex; gap: 8px; align-items: center;
+    z-index: 200; box-shadow: 0 -3px 16px rgba(0,0,0,0.06);
+  }
+  .ti {
+    flex: 1; border: 1.5px solid var(--border); border-radius: 24px;
+    padding: 10px 16px; font-size: 14px; font-family: inherit;
+    outline: none; resize: none; max-height: 100px;
+    background: var(--surface); transition: border-color 0.2s; line-height: 1.4;
+  }
+  .ti:focus { border-color: var(--accent); background: white; }
+  .send-btn {
+    width: 44px; height: 44px; border-radius: 50%; border: none; flex-shrink: 0;
+    background: linear-gradient(135deg,#4f8ef7,#7c5cbf);
+    display: flex; align-items: center; justify-content: center; cursor: pointer;
+    transition: opacity 0.2s; box-shadow: 0 2px 10px rgba(79,142,247,0.35);
+  }
+  .send-btn:active { opacity: 0.8; }
+  .send-btn svg { width: 20px; height: 20px; fill: white; }
+
+  /* pdf btn */
+  .pdf-btn {
+    display: inline-flex; align-items: center; gap: 5px;
+    background: #f8f9ff; border: 1px solid #d8e2ff;
+    border-radius: 16px; padding: 5px 13px; font-size: 12px;
+    color: var(--accent); cursor: pointer; margin-top: 10px;
+    transition: background 0.14s;
+  }
+  .pdf-btn:active { background: #eef2ff; }
+
+  /* toast */
+  .toast {
+    position: fixed; bottom: 82px; left: 50%;
+    transform: translateX(-50%) translateY(8px);
+    background: #1a1a2e; color: white;
+    padding: 10px 20px; border-radius: 24px; font-size: 13px;
+    z-index: 999; opacity: 0; transition: all 0.28s; white-space: nowrap;
+    pointer-events: none;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<!-- ═══ LOCK SCREEN ═══ -->
+<div id="lockScreen">
+  <div class="stars" id="stars"></div>
+  <button class="lang-btn-lock" onclick="toggleLang()">KO / EN</button>
+
+  <div class="lock-header">
+    <div class="lock-logo">
+      <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="4" y="4" width="32" height="32" rx="8" fill="white" fill-opacity="0.15"/>
+        <path d="M20 8 L8 14 L20 20 L32 14 Z" fill="white"/>
+        <path d="M8 26 L20 32 L32 26" stroke="white" stroke-width="2" stroke-linecap="round" fill="none"/>
+        <path d="M8 20 L20 26 L32 20" stroke="white" stroke-width="2" stroke-linecap="round" fill="none"/>
+      </svg>
+    </div>
+    <div class="lock-title" id="lockTitle">마케팅 AI 에이전트</div>
+    <div class="lock-sub" id="lockSub">고객 분석 · 이탈 예측 · 마케팅 최적화</div>
+  </div>
+
+  <div class="fp-wrap">
+    <button class="fp-btn" id="fpBtn" onclick="doAuth()">
+      <div class="fp-ring"></div>
+      <div class="fp-ring"></div>
+      <div class="fp-ring"></div>
+      <div class="fp-icon">
+        <!-- Fingerprint SVG - detailed arcs -->
+        <svg viewBox="0 0 92 92" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <style>
+              .fp-stroke { stroke: rgba(255,255,255,0.75); stroke-width: 1.8; stroke-linecap: round; fill: none; transition: stroke 0.4s; }
+            </style>
+          </defs>
+          <!-- Outer arcs -->
+          <path class="fp-stroke" d="M18 55 C16 49 15 43 15 37 C15 22 29 10 46 10 C63 10 77 22 77 37 C77 43 75 49 73 55"/>
+          <path class="fp-stroke" d="M22 63 C19 57 17 50 17 43 C17 26 30 14 46 14 C62 14 75 26 75 43 C75 50 73 57 70 63"/>
+          <path class="fp-stroke" d="M27 70 C23 63 21 56 21 49 C21 30 32 19 46 19 C60 19 71 30 71 49 C71 56 69 63 65 70"/>
+          <path class="fp-stroke" d="M32 75 C28 68 26 61 26 54 C26 34 35 24 46 24 C57 24 66 34 66 54 C66 61 64 68 60 75"/>
+          <!-- Mid arcs -->
+          <path class="fp-stroke" d="M37 78 C34 72 32 65 32 58 C32 41 38 32 46 32 C54 32 60 41 60 58 C60 65 58 72 55 78"/>
+          <path class="fp-stroke" d="M40 81 C37 76 36 70 36 64 C36 49 40 40 46 40 C52 40 56 49 56 64 C56 70 55 76 52 81"/>
+          <!-- Inner oval -->
+          <ellipse class="fp-stroke" cx="46" cy="50" rx="7" ry="9"/>
+          <!-- Center dot -->
+          <circle cx="46" cy="50" r="2.5" fill="rgba(255,255,255,0.7)" class="fp-stroke" style="stroke-width:0"/>
+          <!-- Vertical center line -->
+          <path class="fp-stroke" d="M46 41 L46 82" opacity="0.5"/>
+          <!-- Top arch -->
+          <path class="fp-stroke" d="M30 30 C30 22 37 16 46 16 C55 16 62 22 62 30"/>
+          <path class="fp-stroke" d="M34 26 C35 20 40 15 46 14"/>
+          <path class="fp-stroke" d="M58 26 C57 20 52 15 46 14"/>
+        </svg>
+      </div>
+    </button>
+
+    <div class="fp-label" id="fpLabel">
+      <span id="fpMain">지문을 터치하여 잠금 해제</span><br>
+      <span style="font-size:11px;opacity:0.5" id="fpSub">Touch fingerprint to unlock</span>
+    </div>
+    <div class="fp-status" id="fpStatus"></div>
+  </div>
+
+  <button class="reset-api-btn" id="resetApiBtn" onclick="openApiModal()">🔑 API 키 재설정</button>
+</div>
+
+<!-- API Modal -->
+<div class="overlay" id="apiOverlay" onclick="overlayClick(event)">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title" id="modalTitle">🔑 API 키 설정</div>
+    <div class="sheet-desc" id="modalDesc">Anthropic API 키를 입력하세요.<br>안전하게 저장되며 지문 인식으로만 앱이 열립니다.</div>
+    <input class="api-field" id="apiField" type="password" placeholder="sk-ant-api03-..." />
+    <button class="api-save-btn" id="apiSaveBtn" onclick="saveKey()">저장하기</button>
+  </div>
+</div>
+
+<!-- ═══ MAIN APP ═══ -->
+<div id="mainApp">
+  <div class="app-bar">
+    <div class="app-icon">
+      <svg viewBox="0 0 40 40" fill="none">
+        <path d="M20 4 L4 12 L20 20 L36 12 Z" fill="white"/>
+        <path d="M4 30 L20 38 L36 30" stroke="white" stroke-width="2.2" stroke-linecap="round" fill="none"/>
+        <path d="M4 22 L20 30 L36 22" stroke="white" stroke-width="2.2" stroke-linecap="round" fill="none"/>
+      </svg>
+    </div>
+    <div class="app-title-block">
+      <div class="app-title" id="appTitle">마케팅 AI 에이전트</div>
+      <div class="app-sub"><span class="data-dot"></span><span id="appSub">데이터 로드 중...</span></div>
+    </div>
+    <button class="hbtn" onclick="toggleLang()" style="font-size:11px;width:auto;padding:0 10px;font-weight:600;">KO/EN</button>
+    <button class="hbtn" onclick="exportAllPDF()" title="PDF">📄</button>
+    <button class="hbtn" onclick="lockApp()" title="잠금">🔒</button>
+  </div>
+
+  <div class="chat" id="chat">
+    <div class="welcome">
+      <h2 id="wTitle">👋 안녕하세요!</h2>
+      <p id="wText">GitHub에서 로드된 실제 고객 데이터를 기반으로<br>마케팅 분석을 시작합니다.</p>
+      <div class="data-badge" id="dataBadge">⏳ 서버 연결 중...</div>
+    </div>
+    <div class="chips-section" id="chipsSection">
+      <div class="chips-label" id="chipsLabel">📊 빠른 분석</div>
+      <div class="chips" id="chips"></div>
+    </div>
+  </div>
+
+  <div class="input-bar">
+    <textarea class="ti" id="ti" rows="1" placeholder="질문을 입력하세요..."
+      onkeydown="onKey(event)" oninput="resize(this)"></textarea>
+    <button class="send-btn" onclick="send()">
+      <svg viewBox="0 0 24 24"><path d="M22 2L11 13" stroke="white" stroke-width="2.2" stroke-linecap="round" fill="none"/><path d="M22 2L15 22 11 13 2 9l20-7z" fill="white"/></svg>
+    </button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ═══ CONFIG ═══
+// Railway 배포 후 이 URL을 실제 Railway 도메인으로 변경하세요
+const BACKEND_URL = window.location.origin;  // 같은 서버에서 serve
+
+// ═══ STATE ═══
+let lang = 'ko';
+let apiKey = localStorage.getItem('mkt_key') || '';
+let history = [];   // {role, content}
+let allMsgs = [];   // {role, text} for PDF
+let serverStats = null;
+let authBusy = false;
+
+// ═══ STARS ═══
+(function(){
+  const c = document.getElementById('stars');
+  for(let i=0;i<70;i++){
+    const s = document.createElement('div');
+    const sz = Math.random()*2.5+1;
+    s.className='star';
+    s.style.cssText=`width:${sz}px;height:${sz}px;left:${Math.random()*100}%;top:${Math.random()*100}%;--d:${2+Math.random()*4}s;--dl:${Math.random()*4}s`;
+    c.appendChild(s);
+  }
+})();
+
+// ═══ I18N ═══
+const TX = {
+  lockTitle:{ko:'마케팅 AI 에이전트',en:'Marketing AI Agent'},
+  lockSub:{ko:'고객 분석 · 이탈 예측 · 마케팅 최적화',en:'Customer Analysis · Churn Prediction · Marketing'},
+  fpMain:{ko:'지문을 터치하여 잠금 해제',en:'Touch fingerprint to unlock'},
+  fpSub:{ko:'Touch fingerprint to unlock',en:'지문으로 잠금 해제'},
+  fpScanning:{ko:'인증 중...', en:'Authenticating...'},
+  fpSuccess:{ko:'✓ 인증 성공',en:'✓ Authenticated'},
+  fpNeedKey:{ko:'먼저 API 키를 설정하세요',en:'Please set your API key first'},
+  resetApiBtn:{ko:'🔑 API 키 재설정',en:'🔑 Reset API Key'},
+  modalTitle:{ko:'🔑 API 키 설정',en:'🔑 Set API Key'},
+  modalDesc:{ko:'Anthropic API 키를 입력하세요.\n안전하게 저장되며 지문 인식으로만 앱이 열립니다.',en:'Enter your Anthropic API key.\nSaved securely, unlocked by fingerprint only.'},
+  apiSaveBtn:{ko:'저장하기',en:'Save'},
+  appTitle:{ko:'마케팅 AI 에이전트',en:'Marketing AI Agent'},
+  appSub:{ko:'실시간 데이터 분석 준비 완료',en:'Live data analysis ready'},
+  appSubLoad:{ko:'데이터 로드 중...',en:'Loading data...'},
+  wTitle:{ko:'👋 안녕하세요!',en:'👋 Hello!'},
+  wText:{ko:'GitHub에서 로드된 실제 고객 데이터를 기반으로\n마케팅 분석을 시작합니다.',en:'Starting analysis with real customer data\nloaded from GitHub.'},
+  chipsLabel:{ko:'📊 빠른 분석',en:'📊 Quick Analysis'},
+  placeholder:{ko:'질문을 입력하세요...', en:'Type your question...'},
+};
+const CHIPS = {
+  ko:['📊 고객 분포 현황','⚠️ 이탈 위험 요인','🎯 고객 세그먼트','💡 마케팅 전략 제안','🏆 VIP 고객 프로파일','📈 국가별 이탈률','🛒 구매 패턴 분석','📧 이메일 캠페인 최적화'],
+  en:['📊 Customer Distribution','⚠️ Churn Risk Factors','🎯 Customer Segments','💡 Marketing Strategy','🏆 VIP Customer Profile','📈 Churn by Country','🛒 Purchase Pattern','📧 Email Campaign Optimization'],
+};
+
+function applyLang() {
+  Object.keys(TX).forEach(k => {
+    const el = document.getElementById(k);
+    if(el) el.textContent = TX[k][lang];
+  });
+  document.querySelectorAll('.ti').forEach(e => e.placeholder = TX.placeholder[lang]);
+  renderChips();
+}
+function toggleLang() { lang = lang==='ko'?'en':'ko'; applyLang(); }
+
+function renderChips() {
+  const el = document.getElementById('chips');
+  if(!el) return;
+  el.innerHTML = CHIPS[lang].map(c =>
+    `<div class="chip" onclick="sendChip('${c}')">${c}</div>`
+  ).join('');
+}
+
+// ═══ FINGERPRINT AUTH ═══
+function doAuth() {
+  if(authBusy) return;
+  if(!apiKey) { openApiModal(); return; }
+  authBusy = true;
+  const btn = document.getElementById('fpBtn');
+  const status = document.getElementById('fpStatus');
+
+  btn.classList.add('scanning');
+  status.textContent = TX.fpScanning[lang];
+  status.className = 'fp-status scanning';
+
+  const strokes = document.querySelectorAll('.fp-stroke');
+  strokes.forEach((s,i) => setTimeout(()=>{
+    s.style.stroke = '#4f8ef7';
+    s.style.strokeDasharray = '300';
+    s.style.strokeDashoffset = '0';
+  }, i*55));
+
+  const t = 1100 + Math.random()*500;
+  setTimeout(()=>{
+    btn.classList.remove('scanning');
+    btn.classList.add('success');
+    status.textContent = TX.fpSuccess[lang];
+    status.className = 'fp-status success';
+    strokes.forEach(s => s.style.stroke = '#22c55e');
+
+    setTimeout(()=>{
+      unlockApp();
+      authBusy = false;
+      btn.classList.remove('success');
+      strokes.forEach(s=>{ s.style.stroke=''; s.style.strokeDasharray=''; });
+      status.textContent=''; status.className='fp-status';
+    }, 650);
+  }, t);
+}
+
+function unlockApp() {
+  document.getElementById('lockScreen').style.display = 'none';
+  const app = document.getElementById('mainApp');
+  app.style.display = 'flex';
+  applyLang();
+  fetchServerStats();
+}
+
+function lockApp() {
+  document.getElementById('mainApp').style.display = 'none';
+  document.getElementById('lockScreen').style.display = 'flex';
+}
+
+// ═══ API MODAL ═══
+function openApiModal() {
+  document.getElementById('apiField').value = '';
+  document.getElementById('apiOverlay').classList.add('open');
+  setTimeout(()=>document.getElementById('apiField').focus(), 350);
+}
+function closeApiModal() {
+  document.getElementById('apiOverlay').classList.remove('open');
+}
+function overlayClick(e) { if(e.target===e.currentTarget) closeApiModal(); }
+function saveKey() {
+  const v = document.getElementById('apiField').value.trim();
+  if(!v) { showToast(lang==='ko'?'API 키를 입력하세요':'Enter API key'); return; }
+  if(!v.startsWith('sk-')) { showToast(lang==='ko'?'올바른 API 키 형식이 아닙니다':'Invalid key format'); return; }
+  apiKey = v;
+  localStorage.setItem('mkt_key', v);
+  closeApiModal();
+  showToast(lang==='ko'?'✓ API 키 저장됨':'✓ Key saved');
+  setTimeout(()=>doAuth(), 400);
+}
+
+// ═══ FETCH SERVER STATS (Railway backend reads the CSV) ═══
+async function fetchServerStats() {
+  const sub = document.getElementById('appSub');
+  const badge = document.getElementById('dataBadge');
+  try {
+    const r = await fetch(`${BACKEND_URL}/api/stats`);
+    if(!r.ok) throw new Error('Server error');
+    serverStats = await r.json();
+    const total = serverStats.overview.total.toLocaleString();
+    const cr = serverStats.overview.churn_rate;
+    sub.textContent = lang==='ko'
+      ? `실시간 데이터 연결 완료 · ${total}명`
+      : `Live data connected · ${total} customers`;
+    badge.innerHTML = `✅ ${lang==='ko'?'실제 데이터 로드 완료':'Real data loaded'} · ${total}${lang==='ko'?'명':'customers'} · 이탈률 ${cr}%`;
+  } catch(e) {
+    sub.textContent = lang==='ko'?'서버 연결 오류':'Server connection error';
+    badge.innerHTML = `⚠️ ${lang==='ko'?'서버에 연결할 수 없습니다. Railway 배포를 확인하세요.':'Cannot connect to server. Check Railway deployment.'}`;
+    badge.style.background = 'rgba(239,68,68,0.25)';
+  }
+}
+
+// ═══ CHAT ═══
+function sendChip(t) { document.getElementById('ti').value=t; send(); }
+function onKey(e) { if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();send();} }
+function resize(el) { el.style.height='auto'; el.style.height=Math.min(el.scrollHeight,100)+'px'; }
+
+async function send() {
+  const inp = document.getElementById('ti');
+  const text = inp.value.trim();
+  if(!text) return;
+  inp.value=''; inp.style.height='auto';
+  document.getElementById('chipsSection').style.display='none';
+
+  appendMsg('user', text);
+  history.push({role:'user', content: text});
+  allMsgs.push({role:'user', text});
+
+  const typing = appendTyping();
+  scrollBottom();
+
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/chat`, {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ messages: history, apiKey, lang })
+    });
+    const data = await res.json();
+    typing.remove();
+    if(!res.ok) throw new Error(data.error||'Server error');
+    const reply = data.content;
+    appendMsg('ai', reply, true);
+    history.push({role:'assistant', content: reply});
+    allMsgs.push({role:'ai', text: reply});
+  } catch(e) {
+    typing.remove();
+    appendMsg('ai', `❌ ${e.message}`);
+  }
+  scrollBottom();
+}
+
+function appendMsg(role, text, hasPdf=false) {
+  const chat = document.getElementById('chat');
+  const div = document.createElement('div');
+  div.className = `msg ${role}`;
+
+  const avHtml = role==='ai'
+    ? `<div class="av ai"><svg viewBox="0 0 40 40" fill="none"><path d="M20 4L4 12l16 8 16-8z" fill="white"/><path d="M4 26l16 8 16-8" stroke="white" stroke-width="2" fill="none"/><path d="M4 20l16 8 16-8" stroke="white" stroke-width="2" fill="none"/></svg></div>`
+    : `<div class="av user">👤</div>`;
+
+  const formatted = fmtText(text);
+  let pdfBtnHtml = hasPdf ? `<br><button class="pdf-btn" onclick="saveMsgPDF(this)">📄 ${lang==='ko'?'PDF 저장':'Save PDF'}</button>` : '';
+
+  div.innerHTML = `${avHtml}<div class="bbl">${formatted}${pdfBtnHtml}</div>`;
+  chat.appendChild(div);
+  return div;
+}
+
+function fmtText(t) {
+  return t
+    .replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>')
+    .replace(/▶\s*(.+?)(?=\n|▶|$)/g, (_, q) =>
+      `<span class="follow-btn" onclick="sendChip('${q.trim().replace(/'/g,"\\'")}')">▶ ${q.trim()}</span>`)
+    .replace(/\n/g,'<br>');
+}
+
+function appendTyping() {
+  const chat = document.getElementById('chat');
+  const div = document.createElement('div');
+  div.className = 'msg ai';
+  div.innerHTML = `<div class="av ai"><svg viewBox="0 0 40 40" fill="none"><path d="M20 4L4 12l16 8 16-8z" fill="white"/></svg></div><div class="bbl"><div class="typing"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div></div>`;
+  chat.appendChild(div);
+  return div;
+}
+function scrollBottom() {
+  const c=document.getElementById('chat');
+  setTimeout(()=>c.scrollTop=c.scrollHeight,80);
+}
+
+// ═══ PDF ═══
+function exportAllPDF() {
+  if(!allMsgs.length){ showToast(lang==='ko'?'저장할 대화가 없습니다':'No conversation yet'); return; }
+  genPDF(allMsgs);
+}
+function saveMsgPDF(btn) {
+  const txt = btn.closest('.bbl').innerText
+    .replace('📄 PDF 저장','').replace('📄 Save PDF','').trim();
+  genPDF([{role:'ai', text:txt}]);
+}
+
+function genPDF(msgs) {
+  try {
+    const {jsPDF} = window.jspdf;
+    const doc = new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+    const M=15, W=210-M*2;
+    let y=M;
+
+    // Header bar
+    doc.setFillColor(79,142,247);
+    doc.rect(0,0,210,22,'F');
+    doc.setTextColor(255,255,255);
+    doc.setFontSize(13); doc.setFont('helvetica','bold');
+    doc.text(lang==='ko'?'마케팅 AI 에이전트 분석 보고서':'Marketing AI Agent Report', M, 14);
+    doc.setFontSize(8); doc.setFont('helvetica','normal');
+    doc.text(new Date().toLocaleString(), 210-M, 14, {align:'right'});
+
+    // Data info line
+    if(serverStats) {
+      doc.setFillColor(240,245,255);
+      doc.rect(0,22,210,10,'F');
+      doc.setTextColor(79,142,247);
+      doc.setFontSize(8);
+      doc.text(`📊 ${lang==='ko'?'실제 데이터':'Real data'}: ${serverStats.overview.total.toLocaleString()}${lang==='ko'?'명':'customers'} · ${lang==='ko'?'이탈률':'Churn rate'}: ${serverStats.overview.churn_rate}% · ${lang==='ko'?'분석 엔진':'Engine'}: Claude claude-sonnet-4-20250514 + Railway`, M, 28);
+    }
+    y = 38;
+
+    doc.setTextColor(26,26,46);
+    msgs.forEach(m => {
+      if(y>272){doc.addPage();y=M;}
+      const isAI = m.role==='ai';
+      const label = isAI?(lang==='ko'?'AI 에이전트':'AI Agent'):(lang==='ko'?'사용자 질문':'User');
+      const clean = m.text.replace(/▶\s?/g,'> ').replace(/<[^>]+>/g,'').replace(/\n\n+/g,'\n').trim();
+      const lines = doc.splitTextToSize(clean, W-8);
+      const bh = Math.min(lines.length*5+14, 90);
+      if(y+bh>276){doc.addPage();y=M;}
+
+      doc.setFillColor(...(isAI?[240,245,255]:[248,248,250]));
+      doc.roundedRect(M, y, W, bh+2, 3, 3, 'F');
+      doc.setFontSize(8); doc.setFont('helvetica','bold');
+      doc.setTextColor(...(isAI?[79,142,247]:[100,100,120]));
+      doc.text(label, M+5, y+8);
+      doc.setFont('helvetica','normal'); doc.setTextColor(40,40,60); doc.setFontSize(9);
+      doc.text(lines.slice(0,Math.floor((bh)/5)), M+5, y+14);
+      y += bh+8;
+    });
+
+    doc.setFontSize(8); doc.setTextColor(160,160,180);
+    doc.text('Generated by Marketing AI Agent | Railway Backend + Claude AI | Real CSV Data', 105, 293, {align:'center'});
+    doc.save(`marketing_report_${Date.now()}.pdf`);
+    showToast(lang==='ko'?'✓ PDF 저장 완료':'✓ PDF saved');
+  } catch(e) { showToast('PDF error: '+e.message); }
+}
+
+// ═══ TOAST ═══
+function showToast(msg) {
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2600);
+}
+
+// ═══ INIT ═══
+window.onload = () => {
+  applyLang();
+  if(!apiKey){
+    const st=document.getElementById('fpStatus');
+    st.textContent=TX.fpNeedKey[lang]; st.className='fp-status error';
+  }
+};
+</script>
+</body>
+</html>

@@ -1,0 +1,224 @@
+{
+  "overview": {
+    "total": 50000,
+    "churned": 14450,
+    "active": 35550,
+    "churn_rate": 28.9,
+    "countries": {
+      "USA": 17384,
+      "UK": 7534,
+      "Canada": 6023,
+      "Germany": 4925,
+      "Australia": 4061,
+      "France": 4013,
+      "India": 3512,
+      "Japan": 2548
+    },
+    "genders": {
+      "Male": 23947,
+      "Female": 25116,
+      "Other": 937
+    },
+    "signup_quarters": {
+      "Q1": 12453,
+      "Q4": 12468,
+      "Q2": 12521,
+      "Q3": 12558
+    }
+  },
+  "avg_metrics": {
+    "Age": {
+      "overall": 37.8,
+      "churned": 35.9,
+      "active": 38.58
+    },
+    "Membership_Years": {
+      "overall": 2.98,
+      "churned": 2.98,
+      "active": 2.98
+    },
+    "Login_Frequency": {
+      "overall": 11.62,
+      "churned": 9.12,
+      "active": 12.64
+    },
+    "Session_Duration_Avg": {
+      "overall": 27.66,
+      "churned": 23.69,
+      "active": 29.21
+    },
+    "Pages_Per_Session": {
+      "overall": 8.74,
+      "churned": 7.37,
+      "active": 9.3
+    },
+    "Cart_Abandonment_Rate": {
+      "overall": 57.08,
+      "churned": 64.18,
+      "active": 54.19
+    },
+    "Wishlist_Items": {
+      "overall": 4.3,
+      "churned": 3.31,
+      "active": 4.7
+    },
+    "Total_Purchases": {
+      "overall": 13.11,
+      "churned": 11.35,
+      "active": 13.83
+    },
+    "Average_Order_Value": {
+      "overall": 123.12,
+      "churned": 134.76,
+      "active": 118.38
+    },
+    "Days_Since_Last_Purchase": {
+      "overall": 29.79,
+      "churned": 36.94,
+      "active": 26.89
+    },
+    "Discount_Usage_Rate": {
+      "overall": 42.0,
+      "churned": 39.42,
+      "active": 43.05
+    },
+    "Returns_Rate": {
+      "overall": 6.68,
+      "churned": 7.2,
+      "active": 6.47
+    },
+    "Email_Open_Rate": {
+      "overall": 20.94,
+      "churned": 15.89,
+      "active": 22.93
+    },
+    "Customer_Service_Calls": {
+      "overall": 5.68,
+      "churned": 6.9,
+      "active": 5.19
+    },
+    "Product_Reviews_Written": {
+      "overall": 2.85,
+      "churned": 2.19,
+      "active": 3.12
+    },
+    "Social_Media_Engagement_Score": {
+      "overall": 29.36,
+      "churned": 23.16,
+      "active": 31.87
+    },
+    "Mobile_App_Usage": {
+      "overall": 19.37,
+      "churned": 16.08,
+      "active": 20.71
+    },
+    "Payment_Method_Diversity": {
+      "overall": 2.35,
+      "churned": 2.36,
+      "active": 2.35
+    },
+    "Lifetime_Value": {
+      "overall": 1440.63,
+      "churned": 1425.42,
+      "active": 1446.81
+    },
+    "Credit_Balance": {
+      "overall": 1966.23,
+      "churned": 1664.2,
+      "active": 2088.59
+    }
+  },
+  "churn_by_country": {
+    "Australia": {
+      "total": 4061,
+      "churned": 1214,
+      "rate": 29.9
+    },
+    "Canada": {
+      "total": 6023,
+      "churned": 1768,
+      "rate": 29.4
+    },
+    "USA": {
+      "total": 17384,
+      "churned": 5056,
+      "rate": 29.1
+    },
+    "India": {
+      "total": 3512,
+      "churned": 1019,
+      "rate": 29.0
+    },
+    "UK": {
+      "total": 7534,
+      "churned": 2169,
+      "rate": 28.8
+    },
+    "Germany": {
+      "total": 4925,
+      "churned": 1420,
+      "rate": 28.8
+    },
+    "Japan": {
+      "total": 2548,
+      "churned": 709,
+      "rate": 27.8
+    },
+    "France": {
+      "total": 4013,
+      "churned": 1095,
+      "rate": 27.3
+    }
+  },
+  "churn_by_gender": {
+    "Male": {
+      "total": 23947,
+      "churned": 6880,
+      "rate": 28.7
+    },
+    "Female": {
+      "total": 25116,
+      "churned": 7277,
+      "rate": 29.0
+    },
+    "Other": {
+      "total": 937,
+      "churned": 293,
+      "rate": 31.3
+    }
+  },
+  "age_bands": {
+    "18-29": {
+      "t": 12038,
+      "c": 4615,
+      "rate": 38.3
+    },
+    "30-39": {
+      "t": 14912,
+      "c": 3897,
+      "rate": 26.1
+    },
+    "40-49": {
+      "t": 12995,
+      "c": 3302,
+      "rate": 25.4
+    },
+    "50-59": {
+      "t": 5968,
+      "c": 1578,
+      "rate": 26.4
+    },
+    "60+": {
+      "t": 1592,
+      "c": 427,
+      "rate": 26.8
+    }
+  },
+  "ltv_percentiles": {
+    "p25": 790.0,
+    "p50": 1243.0,
+    "p75": 1874.0,
+    "p90": 2637.0,
+    "max": 8987.0
+  }
+}
