@@ -28,75 +28,66 @@
   /* ─── LOCK SCREEN ─── */
   #lockScreen {
     position: fixed; inset: 0; z-index: 1000;
-    background: radial-gradient(ellipse at 30% 20%, #1a1060 0%, #0d0a2e 40%, #050314 100%);
+    background: #ffffff;
     display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 0;
   }
-  .stars { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
-  .star { position: absolute; border-radius: 50%; background: white; animation: twinkle var(--d,3s) infinite var(--dl,0s); }
-  @keyframes twinkle { 0%,100%{opacity:.15} 50%{opacity:.9} }
-
-  .lock-header { text-align: center; margin-bottom: 44px; z-index: 1; }
-  .lock-logo {
-    width: 76px; height: 76px; border-radius: 22px; margin: 0 auto 18px;
-    background: linear-gradient(135deg, #4f8ef7 0%, #7c5cbf 100%);
-    display: flex; align-items: center; justify-content: center;
-    box-shadow: 0 0 48px rgba(79,142,247,0.45), 0 0 0 1px rgba(255,255,255,0.1);
+  .lock-title {
+    font-size: 22px; font-weight: 600; color: #4a4a4a;
+    text-align: center; margin-bottom: 48px; line-height: 1.4;
+    padding: 0 24px;
   }
-  .lock-logo svg { width: 40px; height: 40px; }
-  .lock-title { font-size: 23px; font-weight: 700; color: #fff; letter-spacing: 0.3px; }
-  .lock-sub { font-size: 13px; color: rgba(255,255,255,0.45); margin-top: 6px; }
-
   /* Fingerprint */
-  .fp-wrap { z-index: 1; display: flex; flex-direction: column; align-items: center; gap: 22px; }
+  .fp-wrap { display: flex; flex-direction: column; align-items: center; gap: 32px; }
+  /* 손가락 원형 버튼 — 첨부 이미지 스타일 */
   .fp-btn {
-    width: 148px; height: 148px; position: relative;
+    width: 170px; height: 170px; position: relative;
     display: flex; align-items: center; justify-content: center;
     cursor: pointer; border: none; background: none; padding: 0;
     -webkit-tap-highlight-color: transparent;
   }
-  .fp-ring {
-    position: absolute; border-radius: 50%;
-    border: 1.5px solid rgba(79,142,247,0.35);
-    animation: pulse 2.8s ease-in-out infinite;
+  .fp-circle {
+    width: 170px; height: 170px; border-radius: 50%;
+    background: #e8f5f0; border: 4px solid #2eaa7c;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.2s; box-shadow: 0 4px 20px rgba(46,170,124,0.15);
   }
-  .fp-ring:nth-child(1) { inset: 0; }
-  .fp-ring:nth-child(2) { inset: -14px; border-color: rgba(79,142,247,0.18); animation-delay: 0.6s; }
-  .fp-ring:nth-child(3) { inset: -28px; border-color: rgba(79,142,247,0.09); animation-delay: 1.2s; }
-  @keyframes pulse { 0%,100%{transform:scale(1);opacity:.5} 50%{transform:scale(1.04);opacity:1} }
+  .fp-btn:active .fp-circle { transform: scale(0.94); background: #d4ede5; }
+  .fp-emoji { font-size: 80px; line-height: 1; user-select: none; }
 
-  .fp-icon { position: relative; z-index: 1; }
-  .fp-icon svg { width: 92px; height: 92px; transition: transform 0.18s; }
-  .fp-btn:active .fp-icon svg { transform: scale(0.93); }
+  .fp-btn.scanning .fp-circle {
+    border-color: #4f8ef7; background: #e8f0ff;
+    animation: scanPulse 0.8s ease-in-out infinite;
+  }
+  @keyframes scanPulse {
+    0%,100%{ box-shadow: 0 0 0 0 rgba(79,142,247,0.35); }
+    50%    { box-shadow: 0 0 0 14px rgba(79,142,247,0); }
+  }
+  .fp-btn.success .fp-circle { border-color: #22c55e; background: #e8fdf0; }
+  .fp-btn.error   .fp-circle { border-color: #ef4444; background: #fff0f0; }
 
-  /* scanning state */
-  .fp-btn.scanning .fp-ring { border-color: rgba(79,142,247,0.9); animation-duration: 0.7s; }
-  .fp-btn.scanning .fp-stroke { stroke: #4f8ef7 !important; animation: drawStroke 1.1s ease-in-out forwards; }
-  @keyframes drawStroke { from{stroke-dashoffset:300} to{stroke-dashoffset:0} }
-
-  /* success state */
-  .fp-btn.success .fp-stroke { stroke: #22c55e !important; }
-  .fp-btn.success .fp-ring { border-color: rgba(34,197,94,0.85); }
-
-  .fp-label { font-size: 14px; color: rgba(255,255,255,0.65); text-align: center; line-height: 1.7; }
-  .fp-status { height: 26px; font-size: 13px; color: rgba(255,255,255,0.5); z-index: 1; }
-  .fp-status.scanning { color: #4f8ef7; }
-  .fp-status.success  { color: #22c55e; }
+  .fp-status { height: 26px; font-size: 13px; color: #999; text-align: center; }
+  .fp-status.scanning { color: #4f8ef7; font-weight: 500; }
+  .fp-status.success  { color: #22c55e; font-weight: 500; }
   .fp-status.error    { color: #ef4444; }
 
   .reset-api-btn {
-    z-index: 1; margin-top: 18px;
-    background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.14);
-    color: rgba(255,255,255,0.55); padding: 11px 28px; border-radius: 30px;
-    font-size: 13px; cursor: pointer; transition: all 0.2s; backdrop-filter: blur(8px);
+    margin-top: 8px; width: 280px; padding: 16px 24px;
+    background: white; border: 1.5px solid #e0e0e0; border-radius: 16px;
+    font-size: 16px; font-weight: 500; color: #4a4a4a;
+    cursor: pointer; transition: all 0.18s;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
   }
-  .reset-api-btn:active { background: rgba(255,255,255,0.14); color: white; }
+  .reset-api-btn:active { background: #f5f5f5; border-color: #bbb; }
 
   .lang-btn-lock {
     position: absolute; top: 18px; right: 18px; z-index: 10;
-    background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.18);
-    color: rgba(255,255,255,0.7); padding: 7px 16px;
+    background: #f5f5f5; border: 1px solid #e0e0e0;
+    color: #666; padding: 7px 16px;
     border-radius: 20px; font-size: 12px; cursor: pointer; font-weight: 500;
   }
+
 
   /* ─── API MODAL ─── */
   .overlay {
@@ -312,65 +303,26 @@
 
 <!-- ═══ LOCK SCREEN ═══ -->
 <div id="lockScreen">
-  <div class="stars" id="stars"></div>
   <button class="lang-btn-lock" onclick="toggleLang()">KO / EN</button>
 
-  <div class="lock-header">
-    <div class="lock-logo">
-      <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <rect x="4" y="4" width="32" height="32" rx="8" fill="white" fill-opacity="0.15"/>
-        <path d="M20 8 L8 14 L20 20 L32 14 Z" fill="white"/>
-        <path d="M8 26 L20 32 L32 26" stroke="white" stroke-width="2" stroke-linecap="round" fill="none"/>
-        <path d="M8 20 L20 26 L32 20" stroke="white" stroke-width="2" stroke-linecap="round" fill="none"/>
-      </svg>
-    </div>
-    <div class="lock-title" id="lockTitle">마케팅 AI 에이전트</div>
-    <div class="lock-sub" id="lockSub">고객 분석 · 이탈 예측 · 마케팅 최적화</div>
-  </div>
+  <!-- 안내 텍스트 -->
+  <div class="lock-title" id="lockTitle">지문 인식으로 잠금을 해제하세요</div>
 
   <div class="fp-wrap">
+    <!-- 손가락 이모지 원형 버튼 -->
     <button class="fp-btn" id="fpBtn" onclick="doAuth()">
-      <div class="fp-ring"></div>
-      <div class="fp-ring"></div>
-      <div class="fp-ring"></div>
-      <div class="fp-icon">
-        <!-- Fingerprint SVG - detailed arcs -->
-        <svg viewBox="0 0 92 92" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <defs>
-            <style>
-              .fp-stroke { stroke: rgba(255,255,255,0.75); stroke-width: 1.8; stroke-linecap: round; fill: none; transition: stroke 0.4s; }
-            </style>
-          </defs>
-          <!-- Outer arcs -->
-          <path class="fp-stroke" d="M18 55 C16 49 15 43 15 37 C15 22 29 10 46 10 C63 10 77 22 77 37 C77 43 75 49 73 55"/>
-          <path class="fp-stroke" d="M22 63 C19 57 17 50 17 43 C17 26 30 14 46 14 C62 14 75 26 75 43 C75 50 73 57 70 63"/>
-          <path class="fp-stroke" d="M27 70 C23 63 21 56 21 49 C21 30 32 19 46 19 C60 19 71 30 71 49 C71 56 69 63 65 70"/>
-          <path class="fp-stroke" d="M32 75 C28 68 26 61 26 54 C26 34 35 24 46 24 C57 24 66 34 66 54 C66 61 64 68 60 75"/>
-          <!-- Mid arcs -->
-          <path class="fp-stroke" d="M37 78 C34 72 32 65 32 58 C32 41 38 32 46 32 C54 32 60 41 60 58 C60 65 58 72 55 78"/>
-          <path class="fp-stroke" d="M40 81 C37 76 36 70 36 64 C36 49 40 40 46 40 C52 40 56 49 56 64 C56 70 55 76 52 81"/>
-          <!-- Inner oval -->
-          <ellipse class="fp-stroke" cx="46" cy="50" rx="7" ry="9"/>
-          <!-- Center dot -->
-          <circle cx="46" cy="50" r="2.5" fill="rgba(255,255,255,0.7)" class="fp-stroke" style="stroke-width:0"/>
-          <!-- Vertical center line -->
-          <path class="fp-stroke" d="M46 41 L46 82" opacity="0.5"/>
-          <!-- Top arch -->
-          <path class="fp-stroke" d="M30 30 C30 22 37 16 46 16 C55 16 62 22 62 30"/>
-          <path class="fp-stroke" d="M34 26 C35 20 40 15 46 14"/>
-          <path class="fp-stroke" d="M58 26 C57 20 52 15 46 14"/>
-        </svg>
+      <div class="fp-circle">
+        <span class="fp-emoji">☝️</span>
       </div>
     </button>
 
-    <div class="fp-label" id="fpLabel">
-      <span id="fpMain">지문을 터치하여 잠금 해제</span><br>
-      <span style="font-size:11px;opacity:0.5" id="fpSub">Touch fingerprint to unlock</span>
-    </div>
     <div class="fp-status" id="fpStatus"></div>
-  </div>
 
-  <button class="reset-api-btn" id="resetApiBtn" onclick="openApiModal()">🔑 API 키 재설정</button>
+    <!-- API 키 재설정 버튼 -->
+    <button class="reset-api-btn" id="resetApiBtn" onclick="openApiModal()">
+      ⚙️ API 키 재설정
+    </button>
+  </div>
 </div>
 
 <!-- API Modal -->
@@ -448,21 +400,9 @@ let serverStats = null;
 let authBusy = false;
 let usedChips = new Set();  // tracks which chips have been used
 
-// ═══ STARS ═══
-(function(){
-  const c = document.getElementById('stars');
-  for(let i=0;i<70;i++){
-    const s = document.createElement('div');
-    const sz = Math.random()*2.5+1;
-    s.className='star';
-    s.style.cssText=`width:${sz}px;height:${sz}px;left:${Math.random()*100}%;top:${Math.random()*100}%;--d:${2+Math.random()*4}s;--dl:${Math.random()*4}s`;
-    c.appendChild(s);
-  }
-})();
-
 // ═══ I18N ═══
 const TX = {
-  lockTitle:{ko:'마케팅 AI 에이전트',en:'Marketing AI Agent'},
+  lockTitle:{ko:'지문 인식으로 잠금을 해제하세요',en:'Unlock with fingerprint'},
   lockSub:{ko:'고객 분석 · 이탈 예측 · 마케팅 최적화',en:'Customer Analysis · Churn Prediction · Marketing'},
   fpMain:{ko:'지문을 터치하여 잠금 해제',en:'Touch fingerprint to unlock'},
   fpSub:{ko:'Touch fingerprint to unlock',en:'지문으로 잠금 해제'},
@@ -541,41 +481,33 @@ function hasCredential() {
 
 // 애니메이션 헬퍼
 function fpSetState(state) {
-  const btn = document.getElementById('fpBtn');
+  const btn    = document.getElementById('fpBtn');
   const status = document.getElementById('fpStatus');
-  const strokes = document.querySelectorAll('.fp-stroke');
   btn.classList.remove('scanning','success','error');
-  if(state === 'scanning') {
+  if (state === 'scanning') {
     btn.classList.add('scanning');
     status.textContent = TX.fpScanning[lang];
     status.className = 'fp-status scanning';
-    strokes.forEach((s,i) => setTimeout(()=>{
-      s.style.stroke = '#4f8ef7';
-      s.style.strokeDasharray = '300';
-      s.style.strokeDashoffset = '0';
-    }, i*40));
-  } else if(state === 'success') {
+  } else if (state === 'success') {
     btn.classList.add('success');
     status.textContent = TX.fpSuccess[lang];
     status.className = 'fp-status success';
-    strokes.forEach(s => s.style.stroke = '#22c55e');
-  } else if(state === 'error') {
+  } else if (state === 'error') {
+    btn.classList.add('error');
     status.textContent = TX.fpFail[lang];
     status.className = 'fp-status error';
-    strokes.forEach(s => s.style.stroke = '#ef4444');
-    setTimeout(() => fpReset(), 2000);
+    setTimeout(() => fpReset(), 2200);
   } else {
     fpReset();
   }
 }
 
 function fpReset() {
-  const btn = document.getElementById('fpBtn');
+  const btn    = document.getElementById('fpBtn');
   const status = document.getElementById('fpStatus');
-  const strokes = document.querySelectorAll('.fp-stroke');
   btn.classList.remove('scanning','success','error');
-  strokes.forEach(s=>{ s.style.stroke=''; s.style.strokeDasharray=''; s.style.strokeDashoffset=''; });
-  status.textContent = ''; status.className = 'fp-status';
+  status.textContent = '';
+  status.className = 'fp-status';
 }
 
 // base64url 인코딩/디코딩 유틸
@@ -714,8 +646,8 @@ function lockApp() {
   document.getElementById('lockScreen').style.display = 'flex';
   authBusy = false;
   fpReset();
-  const status = document.getElementById('fpStatus');
-  if(!apiKey) {
+  if (!apiKey) {
+    const status = document.getElementById('fpStatus');
     status.textContent = TX.fpNeedKey[lang];
     status.className = 'fp-status error';
   }
@@ -789,7 +721,10 @@ async function renderChipWithChart(chipText, chipIdx, chartFn) {
 
   // 2) 차트 즉시 렌더 (토큰 소모 없음)
   const chartId = 'chart_' + Date.now();
+  const meta = (CHART_META[lang] || CHART_META.ko)[chipIdx] || {title:'차트', sub:''};
   appendChartMsg(chartId, chipIdx);
+  // allMsgs에 차트 항목 저장 (전체 PDF 저장 시 사용)
+  allMsgs.push({ role:'chart', chartId, chipIdx, title: meta.title });
   setTimeout(() => chartFn(chartId), 80);
 
   // 3) AI 텍스트 분석 병렬 호출
@@ -1185,14 +1120,82 @@ async function saveChartPDF(chartId, title) {
 // ═══ PDF ═══
 function exportAllPDF() {
   if(!allMsgs.length){ showToast(lang==='ko'?'저장할 대화가 없습니다':'No conversation yet'); return; }
-  genPDF(allMsgs);
+  genPDFAll();
 }
 function saveMsgPDF(btn) {
   const txt = btn.closest('.bbl').innerText
     .replace('📄 PDF 저장','').replace('📄 Save PDF','').trim();
-  genPDF([{role:'ai', text:txt}]);
+  genPDF([{role:'ai', text: txt}]);
 }
 
+// ── 전체 대화 PDF (차트 이미지 포함) ──
+async function genPDFAll() {
+  showToast(lang==='ko'?'⏳ PDF 생성 중...':'⏳ Generating PDF...');
+
+  const enriched = [];
+  for (const m of allMsgs) {
+    if (m.role === 'chart') {
+      // 차트 이미지 캡처
+      const canvas = document.getElementById(m.chartId);
+      let imgData = null;
+      if (canvas) {
+        const inst = chartRegistry[m.chartId];
+        // 애니메이션 완료 대기
+        if (inst && inst._animating) await new Promise(r => setTimeout(r, 950));
+        if (inst) inst.draw();
+        await new Promise(r => setTimeout(r, 80));
+        const raw = canvas.toDataURL('image/jpeg', 0.92);
+        const b64 = raw.replace(/^data:image\/(jpeg|png);base64,/, '');
+        if (b64.length > 200) imgData = raw;
+      }
+      enriched.push({ role: 'chart', title: m.title, imgData });
+
+    } else {
+      // 텍스트 정제: ▶ 추가질문 라인, PDF버튼 텍스트 제거 후 빈 줄 정리
+      const lines = (m.text || '').split('
+');
+      const filtered = lines.filter(line => {
+        const t = line.trim();
+        return t.length > 0
+          && !t.startsWith('▶')
+          && t !== 'PDF 저장'
+          && t !== 'Save PDF'
+          && !t.startsWith('📄');
+      });
+      const clean = filtered.join('
+').replace(/
+{3,}/g, '
+
+').trim();
+      if (clean) enriched.push({ role: m.role, text: clean });
+    }
+  }
+
+  const statsPayload = serverStats
+    ? { total: serverStats.overview.total, churn_rate: serverStats.overview.churn_rate }
+    : null;
+
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/pdf-all`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ items: enriched, lang, stats: statsPayload })
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(()=>({}));
+      throw new Error(err.error || 'PDF 생성 실패');
+    }
+    const blob = await res.blob();
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href = url; a.download = `marketing_report_${Date.now()}.pdf`;
+    document.body.appendChild(a); a.click();
+    setTimeout(()=>{ URL.revokeObjectURL(url); a.remove(); }, 1000);
+    showToast(lang==='ko'?'✓ PDF 저장 완료':'✓ PDF saved');
+  } catch(e) { showToast((lang==='ko'?'PDF 오류: ':'PDF error: ') + e.message); }
+}
+
+// ── 단일 메시지 PDF ──
 async function genPDF(msgs) {
   showToast(lang==='ko'?'⏳ PDF 생성 중...':'⏳ Generating PDF...');
   try {
@@ -1212,7 +1215,6 @@ async function genPDF(msgs) {
       throw new Error(err.error || 'PDF 생성 실패');
     }
 
-    // Download the PDF blob
     const blob = await res.blob();
     const url  = URL.createObjectURL(blob);
     const a    = document.createElement('a');
@@ -1237,10 +1239,17 @@ function showToast(msg) {
 // ═══ INIT ═══
 window.onload = () => {
   applyLang();
-  if(!apiKey){
-    const st=document.getElementById('fpStatus');
-    st.textContent=TX.fpNeedKey[lang]; st.className='fp-status error';
+  const st = document.getElementById('fpStatus');
+  if (!apiKey) {
+    // 최초 접속: API 키 없음 안내
+    st.textContent = TX.fpNeedKey[lang];
+    st.className = 'fp-status error';
+  } else if (!localStorage.getItem('mkt_cred_id')) {
+    // API 키 있지만 지문 미등록 안내
+    st.textContent = lang==='ko' ? '손가락을 터치하여 지문 등록' : 'Touch to register fingerprint';
+    st.className = 'fp-status scanning';
   }
+  // else: 정상 재접속 → 상태 없음 (제목 텍스트로 충분)
 };
 </script>
 </body>
