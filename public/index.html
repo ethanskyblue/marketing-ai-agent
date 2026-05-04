@@ -27,14 +27,18 @@
 
   /* ─── LOCK SCREEN ─── */
   #lockScreen {
-    position: fixed; inset: 0; z-index: 1000;
+    position: fixed; inset: 0; z-index: 100;
     background: #ffffff;
     display: flex; flex-direction: column; align-items: center; justify-content: center;
     gap: 0;
   }
+  .lock-app-name {
+    font-size: 26px; font-weight: 700; color: #2eaa7c;
+    text-align: center; margin-bottom: 8px; letter-spacing: -0.3px;
+  }
   .lock-title {
-    font-size: 22px; font-weight: 600; color: #4a4a4a;
-    text-align: center; margin-bottom: 48px; line-height: 1.4;
+    font-size: 16px; font-weight: 400; color: #888;
+    text-align: center; margin-bottom: 40px; line-height: 1.4;
     padding: 0 24px;
   }
   /* Fingerprint */
@@ -91,7 +95,7 @@
 
   /* ─── API MODAL ─── */
   .overlay {
-    position: fixed; inset: 0; z-index: 2000;
+    position: fixed; inset: 0; z-index: 9999;
     background: rgba(0,0,0,0.65); backdrop-filter: blur(6px);
     display: flex; align-items: flex-end; justify-content: center;
     opacity: 0; pointer-events: none; transition: opacity 0.28s;
@@ -305,6 +309,9 @@
 <div id="lockScreen">
   <button class="lang-btn-lock" onclick="toggleLang()">KO / EN</button>
 
+  <!-- 앱 이름 -->
+  <div class="lock-app-name">마케팅 AI 에이전트</div>
+
   <!-- 안내 텍스트 -->
   <div class="lock-title" id="lockTitle">지문 인식으로 잠금을 해제하세요</div>
 
@@ -320,7 +327,7 @@
 
     <!-- API 키 재설정 버튼 -->
     <button class="reset-api-btn" id="resetApiBtn" onclick="openApiModal()">
-      ⚙️ API 키 재설정
+      ⚙️ <span id="resetApiBtn_label">API 키 재설정</span>
     </button>
   </div>
 </div>
@@ -403,13 +410,15 @@ let usedChips = new Set();  // tracks which chips have been used
 // ═══ I18N ═══
 const TX = {
   lockTitle:{ko:'지문 인식으로 잠금을 해제하세요',en:'Unlock with fingerprint'},
+  lockAppName:{ko:'마케팅 AI 에이전트',en:'Marketing AI Agent'},
   lockSub:{ko:'고객 분석 · 이탈 예측 · 마케팅 최적화',en:'Customer Analysis · Churn Prediction · Marketing'},
   fpMain:{ko:'지문을 터치하여 잠금 해제',en:'Touch fingerprint to unlock'},
   fpSub:{ko:'Touch fingerprint to unlock',en:'지문으로 잠금 해제'},
   fpScanning:{ko:'인증 중...', en:'Authenticating...'},
   fpSuccess:{ko:'✓ 인증 성공',en:'✓ Authenticated'},
   fpFail:{ko:'❌ 인증 실패 — 등록된 지문으로 다시 시도하세요',en:'❌ Auth failed — use registered fingerprint'},
-  fpNeedKey:{ko:'먼저 API 키를 설정하세요',en:'Please set your API key first'},
+  fpNeedKey:{ko:'손가락을 터치하여 API 키를 설정하세요',en:'Touch to set your API key'},
+  resetLabel:{ko:'API 키 재설정',en:'Reset API Key'},
   fpNoWebAuthn:{ko:'⚠️ 이 기기는 생체인증을 지원하지 않습니다',en:'⚠️ Biometric auth not supported on this device'},
   resetApiBtn:{ko:'🔑 API 키 재설정',en:'🔑 Reset API Key'},
   modalTitle:{ko:'🔑 API 키 설정',en:'🔑 Set API Key'},
@@ -445,6 +454,12 @@ function applyLang() {
     const el = document.getElementById(k);
     if(el) el.textContent = TX[k][lang];
   });
+  // 앱 이름 번역
+  const appNameEl = document.querySelector('.lock-app-name');
+  if (appNameEl) appNameEl.textContent = TX.lockAppName ? TX.lockAppName[lang] : '마케팅 AI 에이전트';
+  // API 재설정 버튼 레이블
+  const resetLbl = document.getElementById('resetApiBtn_label');
+  if (resetLbl) resetLbl.textContent = TX.resetLabel ? TX.resetLabel[lang] : 'API 키 재설정';
   document.querySelectorAll('.ti').forEach(e => e.placeholder = TX.placeholder[lang]);
   renderChips();
 }
@@ -655,9 +670,12 @@ function lockApp() {
 
 // ═══ API MODAL ═══
 function openApiModal() {
+  // 기존 키가 있으면 마스킹 표시, 없으면 빈칸
   document.getElementById('apiField').value = '';
+  document.getElementById('apiField').placeholder =
+    apiKey ? 'sk-ant-... (새 키를 입력하면 교체됩니다)' : 'sk-ant-api03-...';
   document.getElementById('apiOverlay').classList.add('open');
-  setTimeout(()=>document.getElementById('apiField').focus(), 350);
+  setTimeout(() => document.getElementById('apiField').focus(), 350);
 }
 function closeApiModal() {
   document.getElementById('apiOverlay').classList.remove('open');
@@ -665,15 +683,20 @@ function closeApiModal() {
 function overlayClick(e) { if(e.target===e.currentTarget) closeApiModal(); }
 function saveKey() {
   const v = document.getElementById('apiField').value.trim();
-  if(!v) { showToast(lang==='ko'?'API 키를 입력하세요':'Enter API key'); return; }
-  if(!v.startsWith('sk-')) { showToast(lang==='ko'?'올바른 API 키 형식이 아닙니다':'Invalid key format'); return; }
+  if (!v) {
+    showToast(lang==='ko'?'API 키를 입력하세요':'Enter API key');
+    return;
+  }
+  if (!v.startsWith('sk-')) {
+    showToast(lang==='ko'?'올바른 API 키 형식이 아닙니다 (sk- 로 시작해야 합니다)':'Invalid format — must start with sk-');
+    return;
+  }
   apiKey = v;
   localStorage.setItem('mkt_key', v);
-  // Clear old credential so biometric re-registration happens for new key
-  localStorage.removeItem('mkt_cred_id');
+  localStorage.removeItem('mkt_cred_id'); // 기존 지문 등록 초기화
   closeApiModal();
-  showToast(lang==='ko'?'✓ API 키 저장됨 — 지문을 등록합니다':'✓ Key saved — register fingerprint');
-  setTimeout(()=>doAuth(), 500);
+  showToast(lang==='ko'?'✓ API 키 저장됨 — 지문을 등록해주세요':'✓ Saved — please register fingerprint');
+  setTimeout(() => doAuth(), 600);
 }
 
 // ═══ FETCH SERVER STATS (Railway backend reads the CSV) ═══
