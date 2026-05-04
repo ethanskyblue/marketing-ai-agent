@@ -5,7 +5,7 @@ const fs = require('fs');
 const { parse } = require('csv-parse/sync');
 const Anthropic = require('@anthropic-ai/sdk');
 const PDFDocument = require('pdfkit');
-const nodemailer  = require('nodemailer');
+const { Resend } = require('resend');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -818,53 +818,48 @@ app.post('/api/dashboard', async (req, res) => {
   }
 });
 
-// ─── 메일 발송 엔드포인트 ─────────────────────────────────────────────────────
+// ─── 메일 발송 엔드포인트 (Resend HTTP API) ─────────────────────────────────
 app.post('/api/send-report', async (req, res) => {
   const { segmentation, churn, marketing } = req.body;
   if (!segmentation || !churn || !marketing) {
     return res.status(400).json({ error: '분석 결과가 없습니다. 먼저 대시보드를 실행하세요.' });
   }
 
+  const RESEND_KEY     = process.env.RESEND_API_KEY;
   const MAIL_USER      = process.env.MAIL_USER;
-  const MAIL_PASS      = process.env.MAIL_PASS;
   const MAIL_FROM_NAME = process.env.MAIL_FROM_NAME || '마케팅 AI 에이전트';
 
-  if (!MAIL_USER || !MAIL_PASS) {
-    return res.status(500).json({
-      error: 'Railway 환경변수 MAIL_USER, MAIL_PASS 미설정'
-    });
+  if (!RESEND_KEY) {
+    return res.status(500).json({ error: 'Railway 환경변수 RESEND_API_KEY가 설정되지 않았습니다.' });
+  }
+  if (!MAIL_USER) {
+    return res.status(500).json({ error: 'Railway 환경변수 MAIL_USER(발신자 이메일)가 설정되지 않았습니다.' });
   }
 
-  // mailing_list.txt 파싱
+  // mailing_list.txt 파싱 — "이름 <이메일>" 또는 "이메일" 형식 지원
   const listPath = path.join(__dirname, 'mailing_list.txt');
   if (!fs.existsSync(listPath)) {
-    return res.status(500).json({ error: 'mailing_list.txt 없음' });
+    return res.status(500).json({ error: 'mailing_list.txt 파일이 없습니다.' });
   }
+
   const recipients = fs.readFileSync(listPath, 'utf8')
     .split('\n')
     .map(l => l.trim().replace(/,$/, ''))
-    .filter(l => l.length > 0 && l.includes('@'));
+    .filter(l => l.length > 0 && l.includes('@'))
+    .map(line => {
+      const m = line.match(/^(.+?)\s*<([^>]+)>$/);
+      return m ? { name: m[1].trim(), email: m[2].trim() }
+               : { name: line,        email: line };
+    });
 
   if (!recipients.length) {
-    return res.status(400).json({ error: '유효한 수신자 없음' });
+    return res.status(400).json({ error: '유효한 수신자가 없습니다.' });
   }
 
-  // SMTP transporter — verify() 없이 바로 발송
-  // 포트 465(SSL) 우선 시도 — Railway에서 587(STARTTLS) 차단되는 경우 대비
-  const transporter = nodemailer.createTransport({
-    host: 'smtp.gmail.com',
-    port: 465,
-    secure: true,           // SSL
-    auth: { user: MAIL_USER, pass: MAIL_PASS },
-    connectionTimeout: 20000,
-    greetingTimeout:  10000,
-    socketTimeout:    20000,
-    tls: { rejectUnauthorized: false }
-  });
-
-  const now = new Date().toLocaleString('ko-KR');
-  const s   = richStats;
-  const safe = str => (str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  // 메일 HTML 본문
+  const now  = new Date().toLocaleString('ko-KR');
+  const s    = richStats;
+  const safe = str => (str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 
   const htmlBody = `<!DOCTYPE html>
 <html lang="ko"><head><meta charset="UTF-8">
@@ -883,7 +878,7 @@ app.post('/api/send-report', async (req, res) => {
   .sec-hd{padding:12px 16px;font-size:14px;font-weight:700;color:#fff;border-radius:10px 10px 0 0}
   .sec-hd.seg{background:#4f8ef7}.sec-hd.chrn{background:#ef4444}.sec-hd.mkt{background:#7c5cbf}
   .sec-body{padding:14px 16px;font-size:12.5px;line-height:1.8;color:#333;white-space:pre-wrap;border:1px solid #e5e7eb;border-top:none;border-radius:0 0 10px 10px}
-  .footer{background:#f8f9ff;padding:16px 20px;text-align:center;font-size:11px;color:#aaa;border-top:1px solid #e5e7eb;margin-top:4px}
+  .footer{background:#f8f9ff;padding:16px 20px;text-align:center;font-size:11px;color:#aaa;border-top:1px solid #e5e7eb}
 </style></head><body>
 <div class="wrap">
   <div class="hdr">
@@ -906,32 +901,50 @@ app.post('/api/send-report', async (req, res) => {
   <div class="footer">마케팅 AI 에이전트 자동 생성 | Claude claude-sonnet-4-5 | Railway 백엔드</div>
 </div></body></html>`;
 
-  // 병렬 발송
+  // Resend HTTP API — SMTP 포트 불필요, 순수 HTTPS
+  const resend  = new Resend(RESEND_KEY);
+  const subject = `[마케팅 AI 에이전트] E-Commerce 고객 분석 보고서 — ${now}`;
+
   const settled = await Promise.allSettled(
-    recipients.map(to => transporter.sendMail({
-      from:    `"${MAIL_FROM_NAME}" <${MAIL_USER}>`,
-      to,
-      subject: `[마케팅 AI 에이전트] E-Commerce 고객 분석 보고서 — ${now}`,
-      html:    htmlBody
-    }))
+    recipients.map(r =>
+      resend.emails.send({
+        from:    `${MAIL_FROM_NAME} <${MAIL_USER}>`,
+        to:      [r.email],
+        subject,
+        html:    htmlBody
+      })
+    )
   );
 
-  const results = settled.map((r, i) => ({
-    to:     recipients[i],
-    status: r.status === 'fulfilled' ? 'sent' : 'failed',
-    error:  r.status === 'rejected'  ? r.reason?.message : undefined
-  }));
+  const results = settled.map((r, i) => {
+    if (r.status === 'fulfilled') {
+      // Resend는 error 필드로 오류 반환하기도 함
+      const data = r.value?.data;
+      const err  = r.value?.error;
+      return {
+        to:     `${recipients[i].name} <${recipients[i].email}>`,
+        status: err ? 'failed' : 'sent',
+        id:     data?.id,
+        error:  err ? (err.message || JSON.stringify(err)) : undefined
+      };
+    } else {
+      return {
+        to:     `${recipients[i].name} <${recipients[i].email}>`,
+        status: 'failed',
+        error:  r.reason?.message || String(r.reason)
+      };
+    }
+  });
 
-  const sent   = results.filter(r => r.status === 'sent').length;
-  const failed = results.filter(r => r.status === 'failed').length;
-
-  console.log(`[Mail] sent=${sent} failed=${failed} total=${recipients.length}`);
-  results.filter(r => r.status==='failed').forEach(r =>
-    console.error(`[Mail FAIL] ${r.to}: ${r.error}`)
-  );
-
-  // 실패 오류 메시지를 프론트로 전달 (디버깅용)
+  const sent       = results.filter(r => r.status === 'sent').length;
+  const failed     = results.filter(r => r.status === 'failed').length;
   const firstError = results.find(r => r.status === 'failed')?.error || null;
+
+  console.log(`[Resend] sent=${sent} failed=${failed} total=${recipients.length}`);
+  results.filter(r => r.status === 'failed').forEach(r =>
+    console.error(`[Resend FAIL] ${r.to}: ${r.error}`)
+  );
+
   res.json({ success: sent > 0, sent, failed, total: recipients.length, firstError, results });
 });
 
