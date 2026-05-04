@@ -818,127 +818,107 @@ app.post('/api/dashboard', async (req, res) => {
   }
 });
 
-// ─── 메일 발송 엔드포인트 ────────────────────────────────────────────────────
+// ─── 메일 발송 엔드포인트 ─────────────────────────────────────────────────────
 app.post('/api/send-report', async (req, res) => {
-  const { segmentation, churn, marketing, lang = 'ko' } = req.body;
+  const { segmentation, churn, marketing } = req.body;
   if (!segmentation || !churn || !marketing) {
     return res.status(400).json({ error: '분석 결과가 없습니다. 먼저 대시보드를 실행하세요.' });
   }
 
-  // 환경변수에서 메일 설정 로드
-  const MAIL_USER = process.env.MAIL_USER;
-  const MAIL_PASS = process.env.MAIL_PASS;
+  const MAIL_USER      = process.env.MAIL_USER;
+  const MAIL_PASS      = process.env.MAIL_PASS;
   const MAIL_FROM_NAME = process.env.MAIL_FROM_NAME || '마케팅 AI 에이전트';
 
   if (!MAIL_USER || !MAIL_PASS) {
-    return res.status(500).json({ error: 'Railway 환경변수 MAIL_USER, MAIL_PASS가 설정되지 않았습니다.' });
+    return res.status(500).json({
+      error: 'Railway 환경변수 MAIL_USER, MAIL_PASS 미설정'
+    });
   }
 
-  // mailing_list.txt 읽기
+  // mailing_list.txt 파싱
   const listPath = path.join(__dirname, 'mailing_list.txt');
   if (!fs.existsSync(listPath)) {
-    return res.status(500).json({ error: 'mailing_list.txt 파일이 없습니다.' });
+    return res.status(500).json({ error: 'mailing_list.txt 없음' });
   }
   const recipients = fs.readFileSync(listPath, 'utf8')
     .split('\n')
-    .map(l => l.trim())
+    .map(l => l.trim().replace(/,$/, ''))
     .filter(l => l.length > 0 && l.includes('@'));
 
-  if (recipients.length === 0) {
-    return res.status(400).json({ error: '유효한 수신자가 없습니다.' });
+  if (!recipients.length) {
+    return res.status(400).json({ error: '유효한 수신자 없음' });
   }
 
-  // 메일 HTML 생성
+  // SMTP transporter — verify() 없이 바로 발송
+  const transporter = nodemailer.createTransport({
+    host: 'smtp.gmail.com',
+    port: 587,
+    secure: false,
+    auth: { user: MAIL_USER, pass: MAIL_PASS },
+    connectionTimeout: 15000,
+    greetingTimeout:   8000,
+    socketTimeout:    15000,
+    tls: { rejectUnauthorized: false }
+  });
+
   const now = new Date().toLocaleString('ko-KR');
-  const s = richStats;
+  const s   = richStats;
+  const safe = str => (str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 
   const htmlBody = `<!DOCTYPE html>
 <html lang="ko"><head><meta charset="UTF-8">
 <style>
-  body{font-family:'Malgun Gothic',sans-serif;background:#f5f7fa;margin:0;padding:0}
-  .wrap{max-width:680px;margin:0 auto;background:white}
-  .header{background:linear-gradient(135deg,#4f8ef7,#7c5cbf);padding:32px 28px;color:white;text-align:center}
-  .header h1{font-size:22px;margin:0 0 8px}
-  .header p{font-size:13px;opacity:.85;margin:0}
-  .intro{background:#eef3ff;border-left:4px solid #4f8ef7;padding:18px 24px;margin:24px;border-radius:0 8px 8px 0;font-size:14px;line-height:1.7;color:#333}
-  .stats-row{display:flex;gap:12px;padding:0 24px 20px;flex-wrap:wrap}
-  .stat-box{flex:1;min-width:120px;background:#f8f9ff;border:1px solid #e0e8ff;border-radius:10px;padding:14px;text-align:center}
-  .stat-val{font-size:22px;font-weight:700;color:#4f8ef7}
-  .stat-lbl{font-size:11px;color:#888;margin-top:4px}
-  .section{margin:0 24px 24px;border:1px solid #e5e7eb;border-radius:12px;overflow:hidden}
-  .section-header{background:#4f8ef7;color:white;padding:14px 18px;font-size:15px;font-weight:700}
-  .section-header.churn{background:#ef4444}
-  .section-header.mkt{background:#7c5cbf}
-  .section-body{padding:18px;font-size:13px;line-height:1.8;color:#333;white-space:pre-wrap}
-  .footer{background:#f8f9ff;padding:20px 24px;text-align:center;font-size:11px;color:#aaa;border-top:1px solid #e5e7eb}
+  body{font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-serif;background:#f5f7fa;margin:0;padding:16px 0}
+  .wrap{max-width:660px;margin:0 auto;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,.08)}
+  .hdr{background:linear-gradient(135deg,#4f8ef7,#7c5cbf);padding:28px 24px;color:#fff;text-align:center}
+  .hdr h1{font-size:20px;margin:0 0 6px;font-weight:700}
+  .hdr p{font-size:12px;opacity:.8;margin:0}
+  .intro{background:#eef3ff;border-left:5px solid #4f8ef7;padding:16px 20px;margin:20px 20px 0;border-radius:0 10px 10px 0;font-size:13px;line-height:1.75;color:#333}
+  .stats{display:flex;gap:10px;padding:16px 20px;flex-wrap:wrap}
+  .sbox{flex:1;min-width:100px;background:#f8f9ff;border:1px solid #e0e8ff;border-radius:10px;padding:12px 8px;text-align:center}
+  .sval{font-size:20px;font-weight:700;color:#4f8ef7}
+  .slbl{font-size:10px;color:#888;margin-top:3px}
+  .sec{margin:0 20px 16px}
+  .sec-hd{padding:12px 16px;font-size:14px;font-weight:700;color:#fff;border-radius:10px 10px 0 0}
+  .sec-hd.seg{background:#4f8ef7}.sec-hd.chrn{background:#ef4444}.sec-hd.mkt{background:#7c5cbf}
+  .sec-body{padding:14px 16px;font-size:12.5px;line-height:1.8;color:#333;white-space:pre-wrap;border:1px solid #e5e7eb;border-top:none;border-radius:0 0 10px 10px}
+  .footer{background:#f8f9ff;padding:16px 20px;text-align:center;font-size:11px;color:#aaa;border-top:1px solid #e5e7eb;margin-top:4px}
 </style></head><body>
 <div class="wrap">
-  <div class="header">
+  <div class="hdr">
     <h1>📊 마케팅 AI 에이전트 분석 보고서</h1>
-    <p>생성일시: ${now} · 분석 고객 수: ${s.overview.total.toLocaleString()}명</p>
+    <p>생성일시: ${now} &nbsp;·&nbsp; 분석 고객: ${s.overview.total.toLocaleString()}명</p>
   </div>
-
   <div class="intro">
-    AI 전략 마케팅 강의 보조자료로 마케팅 AI 에이전트를 실제로 구현하여 분석한
-    Business Intelligence의 output을 AI 에이전트가 보내드리는 메일입니다.
+    AI 전략 마케팅 강의 보조자료로 마케팅 AI 에이전트를 실제로 구현하여 분석한<br>
+    <strong>Business Intelligence</strong>의 output을 AI 에이전트가 보내드리는 메일입니다.
   </div>
-
-  <div class="stats-row">
-    <div class="stat-box"><div class="stat-val">${s.overview.total.toLocaleString()}</div><div class="stat-lbl">총 고객 수</div></div>
-    <div class="stat-box"><div class="stat-val" style="color:#ef4444">${s.overview.churn_rate}%</div><div class="stat-lbl">이탈률</div></div>
-    <div class="stat-box"><div class="stat-val">$${s.metrics.Lifetime_Value.overall}</div><div class="stat-lbl">평균 LTV</div></div>
-    <div class="stat-box"><div class="stat-val">${s.metrics.Email_Open_Rate.active}%</div><div class="stat-lbl">이메일 오픈율(유지)</div></div>
+  <div class="stats">
+    <div class="sbox"><div class="sval">${s.overview.total.toLocaleString()}</div><div class="slbl">총 고객 수</div></div>
+    <div class="sbox"><div class="sval" style="color:#ef4444">${s.overview.churn_rate}%</div><div class="slbl">이탈률</div></div>
+    <div class="sbox"><div class="sval">$${s.metrics.Lifetime_Value.overall}</div><div class="slbl">평균 LTV</div></div>
+    <div class="sbox"><div class="sval">${s.metrics.Email_Open_Rate.active}%</div><div class="slbl">이메일 오픈율</div></div>
   </div>
+  <div class="sec"><div class="sec-hd seg">🎯 1. 고객 분석 및 세분화</div><div class="sec-body">${safe(segmentation)}</div></div>
+  <div class="sec"><div class="sec-hd chrn">⚠️ 2. 고객 이탈 예측 모델링</div><div class="sec-body">${safe(churn)}</div></div>
+  <div class="sec"><div class="sec-hd mkt">💡 3. 마케팅 최적화 방안</div><div class="sec-body">${safe(marketing)}</div></div>
+  <div class="footer">마케팅 AI 에이전트 자동 생성 | Claude claude-sonnet-4-5 | Railway 백엔드</div>
+</div></body></html>`;
 
-  <div class="section">
-    <div class="section-header">🎯 1. 고객 분석 및 세분화</div>
-    <div class="section-body">${segmentation.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>
-  </div>
-
-  <div class="section">
-    <div class="section-header churn">⚠️ 2. 고객 이탈 예측 모델링</div>
-    <div class="section-body">${churn.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>
-  </div>
-
-  <div class="section">
-    <div class="section-header mkt">💡 3. 마케팅 최적화 방안</div>
-    <div class="section-body">${marketing.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>
-  </div>
-
-  <div class="footer">
-    본 보고서는 마케팅 AI 에이전트가 자동 생성했습니다.<br>
-    분석 엔진: Claude claude-sonnet-4-5 · 데이터: E-Commerce 고객 ${s.overview.total.toLocaleString()}명 · Railway 백엔드
-  </div>
-</div>
-</body></html>`;
-
-  // Gmail SMTP — SSL 465 직접 사용, verify() 제거로 왕복 1회 절약
-  const transporter = nodemailer.createTransport({
-    host: 'smtp.gmail.com',
-    port: 465,
-    secure: true,
-    auth: { user: MAIL_USER, pass: MAIL_PASS },
-    connectionTimeout: 10000,
-    greetingTimeout:    8000,
-    socketTimeout:     15000,
-  });
-
-  const subject = `[마케팅 AI 에이전트] E-Commerce 고객 분석 보고서 - ${now}`;
-
-  // 병렬 발송 — Promise.allSettled로 일부 실패해도 나머지 계속 진행
+  // 병렬 발송
   const settled = await Promise.allSettled(
-    recipients.map(to =>
-      transporter.sendMail({
-        from: `"${MAIL_FROM_NAME}" <${MAIL_USER}>`,
-        to, subject, html: htmlBody,
-      })
-    )
+    recipients.map(to => transporter.sendMail({
+      from:    `"${MAIL_FROM_NAME}" <${MAIL_USER}>`,
+      to,
+      subject: `[마케팅 AI 에이전트] E-Commerce 고객 분석 보고서 — ${now}`,
+      html:    htmlBody
+    }))
   );
 
   const results = settled.map((r, i) => ({
     to:     recipients[i],
     status: r.status === 'fulfilled' ? 'sent' : 'failed',
-    error:  r.status === 'rejected'  ? r.reason?.message : undefined,
+    error:  r.status === 'rejected'  ? r.reason?.message : undefined
   }));
 
   const sent   = results.filter(r => r.status === 'sent').length;
@@ -946,10 +926,12 @@ app.post('/api/send-report', async (req, res) => {
 
   console.log(`[Mail] sent=${sent} failed=${failed} total=${recipients.length}`);
   results.filter(r => r.status==='failed').forEach(r =>
-    console.error(`  FAIL ${r.to}: ${r.error}`)
+    console.error(`[Mail FAIL] ${r.to}: ${r.error}`)
   );
 
-  res.json({ success: true, sent, failed, total: recipients.length, results });
+  // 실패 오류 메시지를 프론트로 전달 (디버깅용)
+  const firstError = results.find(r => r.status === 'failed')?.error || null;
+  res.json({ success: sent > 0, sent, failed, total: recipients.length, firstError, results });
 });
 
 // Serve frontend

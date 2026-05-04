@@ -1834,10 +1834,20 @@ async function sendDashboardMail() {
     }
 
     const data = await res.json();
-    mailRes.className   = 'db-mail-result ok';
-    mailRes.innerHTML   = isKo
-      ? `✅ 발송 완료: <strong>${data.sent}명</strong> 성공${data.failed > 0 ? ` · ${data.failed}명 실패` : ''}`
-      : `✅ Sent: <strong>${data.sent}</strong>${data.failed > 0 ? ` · ${data.failed} failed` : ''}`;
+
+    if (data.sent === 0) {
+      // 전원 실패 — 오류 원인 표시
+      const errMsg = data.firstError || '알 수 없는 오류';
+      mailRes.className = 'db-mail-result err';
+      mailRes.innerHTML = (isKo
+        ? `❌ 발송 실패 (${data.total}명 모두 실패)<br><small style="word-break:break-all">${errMsg}</small>`
+        : `❌ All ${data.total} failed<br><small>${errMsg}</small>`);
+    } else {
+      mailRes.className = 'db-mail-result ok';
+      mailRes.innerHTML = isKo
+        ? `✅ 발송 완료: <strong>${data.sent}명</strong> 성공${data.failed > 0 ? ` · ${data.failed}명 실패<br><small>${data.firstError||''}</small>` : ''}`
+        : `✅ Sent: <strong>${data.sent}</strong>${data.failed > 0 ? ` · ${data.failed} failed<br><small>${data.firstError||''}</small>` : ''}`;
+    }
     mailRes.style.display = 'block';
     mailBtn.innerHTML = '📧 ' + (isKo ? '메일 재발송' : 'Resend');
 
