@@ -850,14 +850,15 @@ app.post('/api/send-report', async (req, res) => {
   }
 
   // SMTP transporter — verify() 없이 바로 발송
+  // 포트 465(SSL) 우선 시도 — Railway에서 587(STARTTLS) 차단되는 경우 대비
   const transporter = nodemailer.createTransport({
     host: 'smtp.gmail.com',
-    port: 587,
-    secure: false,
+    port: 465,
+    secure: true,           // SSL
     auth: { user: MAIL_USER, pass: MAIL_PASS },
-    connectionTimeout: 15000,
-    greetingTimeout:   8000,
-    socketTimeout:    15000,
+    connectionTimeout: 20000,
+    greetingTimeout:  10000,
+    socketTimeout:    20000,
     tls: { rejectUnauthorized: false }
   });
 
