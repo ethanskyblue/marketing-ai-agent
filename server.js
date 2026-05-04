@@ -820,7 +820,11 @@ app.post('/api/dashboard', async (req, res) => {
 
 // ─── 메일 발송 엔드포인트 (Resend HTTP API) ─────────────────────────────────
 app.post('/api/send-report', async (req, res) => {
-  const { segmentation, churn, marketing } = req.body;
+  const {
+    segmentation, churn, marketing,
+    kmeans, models, features, age_bands, ltv_segments, overview,
+    segChartImg, ageChartImg
+  } = req.body;
   if (!segmentation || !churn || !marketing) {
     return res.status(400).json({ error: '분석 결과가 없습니다. 먼저 대시보드를 실행하세요.' });
   }
@@ -861,6 +865,88 @@ app.post('/api/send-report', async (req, res) => {
   const s    = richStats;
   const safe = str => (str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 
+  // ── 세그먼트 카드 HTML 생성 ──
+  const segData = kmeans || {};
+  const segCards = [
+    { key:'seg1', icon:'⭐', label:'우수 고객',      color:'#22c55e', bg:'#f0fdf4' },
+    { key:'seg0', icon:'👥', label:'일반 충성 고객',  color:'#4f8ef7', bg:'#eff6ff' },
+    { key:'seg3', icon:'⚠️', label:'이탈 위험 고객', color:'#ef4444', bg:'#fef2f2' },
+    { key:'seg2', icon:'💎', label:'프리미엄 소수',   color:'#f59e0b', bg:'#fffbeb' },
+  ].map(sg => {
+    const d = segData[sg.key];
+    if (!d) return '';
+    const churnBar = Math.min(Math.round(d.churn), 100);
+    const ltvBar   = Math.min(Math.round(d.ltv / 80), 100);
+    return `
+    <td style="width:25%;padding:6px;vertical-align:top">
+      <div style="background:${sg.bg};border:1px solid ${sg.color}33;border-radius:10px;padding:10px 8px;text-align:center">
+        <div style="font-size:18px">${sg.icon}</div>
+        <div style="font-size:10px;font-weight:700;color:${sg.color};margin:3px 0">${sg.label}</div>
+        <div style="font-size:11px;color:#555;margin-bottom:6px">${d.n.toLocaleString()}명</div>
+        <div style="font-size:9px;color:#888;margin-bottom:2px">이탈률</div>
+        <div style="background:#e5e7eb;border-radius:3px;height:6px;margin-bottom:4px">
+          <div style="width:${churnBar}%;background:${sg.color};height:6px;border-radius:3px"></div>
+        </div>
+        <div style="font-size:11px;font-weight:700;color:${sg.color}">${d.churn}%</div>
+        <div style="font-size:9px;color:#888;margin:4px 0 2px">LTV</div>
+        <div style="font-size:11px;font-weight:700;color:#333">$${d.ltv.toLocaleString()}</div>
+      </div>
+    </td>`;
+  }).join('');
+
+  // ── 모델 성능 테이블 HTML ──
+  const mdl = models || {};
+  const modelRows = [
+    { k:'logistic', name:'로지스틱 회귀',    best:false },
+    { k:'rf',       name:'랜덤 포레스트',     best:false },
+    { k:'gb',       name:'Gradient Boosting', best:true  },
+    { k:'xgb',      name:'XGBoost',           best:false },
+  ].map(m => {
+    const d = mdl[m.k] || {};
+    return `<tr style="background:${m.best?'#fefce8':'white'}">
+      <td style="padding:7px 10px;font-size:12px;font-weight:${m.best?700:400}">${d.name||m.name}${m.best?'&nbsp;<span style="background:#4f8ef7;color:white;font-size:9px;padding:1px 5px;border-radius:8px">최선</span>':''}</td>
+      <td style="padding:7px 10px;font-size:12px;text-align:center;font-weight:${m.best?700:400}">${d.auc||'-'}</td>
+      <td style="padding:7px 10px;font-size:12px;text-align:center">${d.acc?((d.acc*100).toFixed(1)+'%'):'-'}</td>
+      <td style="padding:7px 10px;font-size:12px;text-align:center">${d.f1||'-'}</td>
+    </tr>`;
+  }).join('');
+
+  // ── 피처 중요도 바 HTML ──
+  const featColors = ['#ef4444','#f59e0b','#f97316','#4f8ef7','#22c55e','#7c5cbf','#06b6d4','#84cc16'];
+  const featureRows = (features||[]).map((f,i) => {
+    const w = Math.round(f.imp / 15 * 100);
+    return `<tr>
+      <td style="padding:5px 10px;font-size:11px;color:#555;width:100px;text-align:right">${f.name}</td>
+      <td style="padding:5px 8px"><div style="background:#f3f4f6;border-radius:4px;height:10px">
+        <div style="width:${w}%;background:${featColors[i]};height:10px;border-radius:4px"></div>
+      </div></td>
+      <td style="padding:5px 6px;font-size:11px;font-weight:700;color:#444;width:36px">${f.imp}%</td>
+    </tr>`;
+  }).join('');
+
+  // ── 연령대 테이블 HTML ──
+  const ageBands = age_bands || {};
+  const ageRows = Object.entries(ageBands).map(([band, d]) => {
+    const color = d.rate > 35 ? '#ef4444' : d.rate > 28 ? '#f59e0b' : '#22c55e';
+    const w = Math.round(d.rate / 45 * 100);
+    return `<tr>
+      <td style="padding:6px 10px;font-size:12px;color:#555">${band}세</td>
+      <td style="padding:6px 10px;font-size:12px;text-align:right">${d.t.toLocaleString()}명</td>
+      <td style="padding:6px 8px;width:120px"><div style="background:#f3f4f6;border-radius:4px;height:10px">
+        <div style="width:${w}%;background:${color};height:10px;border-radius:4px"></div>
+      </div></td>
+      <td style="padding:6px 8px;font-size:12px;font-weight:700;color:${color};width:40px">${d.rate}%</td>
+    </tr>`;
+  }).join('');
+
+  // ── 차트 이미지 섹션 ──
+  const segImgTag = segChartImg
+    ? `<img src="${segChartImg}" style="width:100%;max-width:520px;border-radius:8px;display:block;margin:0 auto" alt="세그먼트 분포 차트">`
+    : '';
+  const ageImgTag = ageChartImg
+    ? `<img src="${ageChartImg}" style="width:100%;max-width:520px;border-radius:8px;display:block;margin:0 auto" alt="연령대별 이탈률 차트">`
+    : '';
+
   const htmlBody = `<!DOCTYPE html>
 <html lang="ko"><head><meta charset="UTF-8">
 <style>
@@ -870,38 +956,111 @@ app.post('/api/send-report', async (req, res) => {
   .hdr h1{font-size:20px;margin:0 0 6px;font-weight:700}
   .hdr p{font-size:12px;opacity:.8;margin:0}
   .intro{background:#eef3ff;border-left:5px solid #4f8ef7;padding:16px 20px;margin:20px 20px 0;border-radius:0 10px 10px 0;font-size:13px;line-height:1.75;color:#333}
-  .stats{display:flex;gap:10px;padding:16px 20px;flex-wrap:wrap}
-  .sbox{flex:1;min-width:100px;background:#f8f9ff;border:1px solid #e0e8ff;border-radius:10px;padding:12px 8px;text-align:center}
-  .sval{font-size:20px;font-weight:700;color:#4f8ef7}
-  .slbl{font-size:10px;color:#888;margin-top:3px}
-  .sec{margin:0 20px 16px}
-  .sec-hd{padding:12px 16px;font-size:14px;font-weight:700;color:#fff;border-radius:10px 10px 0 0}
-  .sec-hd.seg{background:#4f8ef7}.sec-hd.chrn{background:#ef4444}.sec-hd.mkt{background:#7c5cbf}
-  .sec-body{padding:14px 16px;font-size:12.5px;line-height:1.8;color:#333;white-space:pre-wrap;border:1px solid #e5e7eb;border-top:none;border-radius:0 0 10px 10px}
+  .sec-wrap{margin:16px 20px}
+  .sec-hd{padding:11px 16px;font-size:13px;font-weight:700;color:#fff;border-radius:10px 10px 0 0;margin:0}
+  .seg-bg{background:#4f8ef7}.chrn-bg{background:#ef4444}.mkt-bg{background:#7c5cbf}.data-bg{background:#7c5cbf}
+  .sec-body{padding:14px 16px;font-size:12px;line-height:1.8;color:#333;white-space:pre-wrap;border:1px solid #e5e7eb;border-top:none;border-radius:0 0 10px 10px}
+  .tbl{width:100%;border-collapse:collapse;font-size:12px}
+  .tbl th{background:#f8f9ff;padding:8px 10px;text-align:center;font-weight:700;color:#555;border-bottom:1px solid #e5e7eb}
+  .tbl td{border-bottom:1px solid #f3f4f6}
   .footer{background:#f8f9ff;padding:16px 20px;text-align:center;font-size:11px;color:#aaa;border-top:1px solid #e5e7eb}
+  .stats{display:flex;gap:0;border-bottom:1px solid #e5e7eb}
+  .sbox{flex:1;padding:14px 8px;text-align:center;border-right:1px solid #e5e7eb}
+  .sbox:last-child{border-right:none}
+  .sval{font-size:18px;font-weight:700;color:#4f8ef7}
+  .slbl{font-size:10px;color:#888;margin-top:3px}
 </style></head><body>
 <div class="wrap">
+
+  <!-- 헤더 -->
   <div class="hdr">
     <h1>📊 마케팅 AI 에이전트 분석 보고서</h1>
     <p>생성일시: ${now} &nbsp;·&nbsp; 분석 고객: ${s.overview.total.toLocaleString()}명</p>
   </div>
+
+  <!-- 서두 -->
   <div class="intro">
     AI 전략 마케팅 강의 보조자료로 마케팅 AI 에이전트를 실제로 구현하여 분석한<br>
     <strong>Business Intelligence</strong>의 output을 AI 에이전트가 보내드리는 메일입니다.
   </div>
+
+  <!-- 핵심 지표 -->
   <div class="stats">
     <div class="sbox"><div class="sval">${s.overview.total.toLocaleString()}</div><div class="slbl">총 고객 수</div></div>
     <div class="sbox"><div class="sval" style="color:#ef4444">${s.overview.churn_rate}%</div><div class="slbl">이탈률</div></div>
     <div class="sbox"><div class="sval">$${s.metrics.Lifetime_Value.overall}</div><div class="slbl">평균 LTV</div></div>
     <div class="sbox"><div class="sval">${s.metrics.Email_Open_Rate.active}%</div><div class="slbl">이메일 오픈율</div></div>
   </div>
-  <div class="sec"><div class="sec-hd seg">🎯 1. 고객 분석 및 세분화</div><div class="sec-body">${safe(segmentation)}</div></div>
-  <div class="sec"><div class="sec-hd chrn">⚠️ 2. 고객 이탈 예측 모델링</div><div class="sec-body">${safe(churn)}</div></div>
-  <div class="sec"><div class="sec-hd mkt">💡 3. 마케팅 최적화 방안</div><div class="sec-body">${safe(marketing)}</div></div>
-  <div class="footer">마케팅 AI 에이전트 자동 생성 | Claude claude-sonnet-4-5 | Railway 백엔드</div>
+
+  <!-- ① 고객 분석 및 세분화 -->
+  <div class="sec-wrap">
+    <div class="sec-hd seg-bg">🎯 1. 고객 분석 및 세분화</div>
+    <div style="border:1px solid #e5e7eb;border-top:none;border-radius:0 0 10px 10px;padding:14px">
+
+      <!-- 세그먼트 카드 -->
+      <p style="font-size:12px;font-weight:700;color:#555;margin:0 0 8px">K-Means 4개 클러스터</p>
+      <table style="width:100%;border-collapse:collapse"><tr>${segCards}</tr></table>
+
+      <!-- 세그먼트 도넛 차트 이미지 -->
+      ${segImgTag ? '<div style="margin:12px 0">' + segImgTag + '</div>' : ''}
+
+      <!-- AI 분석 텍스트 -->
+      <div style="background:#f8f9ff;border-radius:8px;padding:12px;margin-top:10px;font-size:12px;line-height:1.8;color:#333;white-space:pre-wrap">${safe(segmentation)}</div>
+    </div>
+  </div>
+
+  <!-- ② 이탈 예측 모델링 -->
+  <div class="sec-wrap">
+    <div class="sec-hd chrn-bg">⚠️ 2. 고객 이탈 예측 모델링</div>
+    <div style="border:1px solid #e5e7eb;border-top:none;border-radius:0 0 10px 10px;padding:14px">
+
+      <!-- 모델 성능 테이블 -->
+      <p style="font-size:12px;font-weight:700;color:#555;margin:0 0 8px">모델 성능 비교</p>
+      <table class="tbl" style="margin-bottom:14px">
+        <thead><tr>
+          <th style="text-align:left">모델</th><th>AUC</th><th>정확도</th><th>F1</th>
+        </tr></thead>
+        <tbody>${modelRows}</tbody>
+      </table>
+
+      <!-- 피처 중요도 바 -->
+      <p style="font-size:12px;font-weight:700;color:#555;margin:0 0 8px">피처 중요도 Top 8</p>
+      <table style="width:100%;border-collapse:collapse;margin-bottom:10px">
+        <tbody>${featureRows}</tbody>
+      </table>
+
+      <!-- AI 분석 텍스트 -->
+      <div style="background:#fff5f5;border-radius:8px;padding:12px;font-size:12px;line-height:1.8;color:#333;white-space:pre-wrap">${safe(churn)}</div>
+    </div>
+  </div>
+
+  <!-- ③ 마케팅 최적화 -->
+  <div class="sec-wrap">
+    <div class="sec-hd mkt-bg">💡 3. 마케팅 최적화 방안</div>
+    <div style="border:1px solid #e5e7eb;border-top:none;border-radius:0 0 10px 10px;padding:14px">
+
+      <!-- 연령대별 이탈률 테이블 + 차트 -->
+      <p style="font-size:12px;font-weight:700;color:#555;margin:0 0 8px">연령대별 이탈률</p>
+      <table class="tbl" style="margin-bottom:10px">
+        <thead><tr>
+          <th style="text-align:left">연령대</th><th style="text-align:right">고객 수</th>
+          <th>이탈률 바</th><th>이탈률</th>
+        </tr></thead>
+        <tbody>${ageRows}</tbody>
+      </table>
+      ${ageImgTag ? '<div style="margin:10px 0">' + ageImgTag + '</div>' : ''}
+
+      <!-- AI 분석 텍스트 -->
+      <div style="background:#f5f0ff;border-radius:8px;padding:12px;font-size:12px;line-height:1.8;color:#333;white-space:pre-wrap">${safe(marketing)}</div>
+    </div>
+  </div>
+
+  <div class="footer">
+    마케팅 AI 에이전트 자동 생성 | Claude claude-sonnet-4-5 | Railway 백엔드
+  </div>
 </div></body></html>`;
 
-  // Resend HTTP API — SMTP 포트 불필요, 순수 HTTPS
+  // Resend HTTP API — SMTP 포트 불필요, 순수 HTTPS  // Resend HTTP API — SMTP 포트 불필요, 순수 HTTPS
   const resend  = new Resend(RESEND_KEY);
   const subject = `[마케팅 AI 에이전트] E-Commerce 고객 분석 보고서 — ${now}`;
 
