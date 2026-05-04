@@ -278,95 +278,199 @@
 
   /* ─── 인터랙티브 대시보드 ─── */
   .dashboard-overlay {
-    position: fixed; inset: 0; z-index: 500;
-    background: rgba(0,0,0,0.55); backdrop-filter: blur(4px);
-    display: none; align-items: flex-start; justify-content: center;
-    overflow-y: auto; padding: 16px 0 40px;
+    position:fixed; inset:0; z-index:500;
+    background:rgba(10,15,30,0.72); backdrop-filter:blur(6px);
+    display:none; align-items:flex-start; justify-content:center;
+    overflow-y:auto; padding:12px 0 40px;
   }
-  .dashboard-overlay.open { display: flex; }
+  .dashboard-overlay.open { display:flex; }
   .dashboard-panel {
-    background: white; border-radius: 20px;
-    width: calc(100% - 24px); max-width: 520px;
-    margin: auto; overflow: hidden;
-    box-shadow: 0 8px 40px rgba(0,0,0,0.25);
+    background:#f6f7fb; border-radius:20px;
+    width:calc(100% - 20px); max-width:520px;
+    margin:auto; overflow:hidden;
+    box-shadow:0 16px 60px rgba(0,0,0,0.35);
   }
+  /* 헤더 */
   .db-header {
-    background: linear-gradient(135deg,#4f8ef7,#7c5cbf);
-    padding: 20px 20px 16px; color: white;
-    display: flex; align-items: center; justify-content: space-between;
+    background:linear-gradient(135deg,#4f8ef7 0%,#7c5cbf 100%);
+    padding:18px 18px 14px; color:white;
+    display:flex; align-items:flex-start; justify-content:space-between;
   }
-  .db-header h2 { font-size: 17px; font-weight: 700; margin: 0; }
-  .db-header p  { font-size: 11px; opacity: .8; margin: 4px 0 0; }
+  .db-header-left h2 { font-size:16px; font-weight:700; margin:0 0 3px; }
+  .db-header-left p  { font-size:11px; opacity:.75; margin:0; }
   .db-close {
-    background: rgba(255,255,255,0.2); border: none; color: white;
-    width: 32px; height: 32px; border-radius: 50%; font-size: 16px;
-    cursor: pointer; display: flex; align-items: center; justify-content: center;
-    flex-shrink: 0;
+    background:rgba(255,255,255,0.18); border:none; color:white;
+    width:30px; height:30px; border-radius:50%; font-size:14px;
+    cursor:pointer; display:flex; align-items:center; justify-content:center;
+    flex-shrink:0; transition:background .15s;
   }
-  .db-stats {
-    display: flex; gap: 8px; padding: 16px 16px 0; flex-wrap: wrap;
+  .db-close:active { background:rgba(255,255,255,0.3); }
+  /* 탭 */
+  .db-tabs {
+    display:flex; background:white; border-bottom:1px solid #e5e7eb;
   }
-  .db-stat {
-    flex: 1; min-width: 80px; background: #f8f9ff;
-    border: 1px solid #e0e8ff; border-radius: 10px;
-    padding: 10px 8px; text-align: center;
+  .db-tab {
+    flex:1; padding:11px 6px; font-size:12px; font-weight:600;
+    text-align:center; cursor:pointer; color:#888; border:none;
+    background:none; border-bottom:2.5px solid transparent;
+    transition:all .18s; white-space:nowrap;
   }
-  .db-stat-val { font-size: 18px; font-weight: 700; color: #4f8ef7; }
-  .db-stat-val.danger { color: #ef4444; }
-  .db-stat-lbl { font-size: 10px; color: #888; margin-top: 3px; }
+  .db-tab.active { color:#4f8ef7; border-bottom-color:#4f8ef7; }
+  .db-tab:active { background:#f8f9ff; }
+  /* 탭 콘텐츠 */
+  .db-tab-content { display:none; }
+  .db-tab-content.active { display:block; }
+  /* 통계 카드 */
+  .db-stat-grid {
+    display:grid; grid-template-columns:repeat(4,1fr);
+    gap:8px; padding:14px 14px 0;
+  }
+  .db-stat-card {
+    background:white; border-radius:12px; padding:12px 8px;
+    text-align:center; box-shadow:0 1px 6px rgba(0,0,0,.06);
+    border:1px solid #e5e7eb;
+  }
+  .db-stat-val { font-size:17px; font-weight:700; color:#4f8ef7; }
+  .db-stat-val.red { color:#ef4444; }
+  .db-stat-val.grn { color:#22c55e; }
+  .db-stat-val.pur { color:#7c5cbf; }
+  .db-stat-lbl { font-size:10px; color:#888; margin-top:3px; line-height:1.3; }
+  /* 실행 버튼 */
   .db-run-btn {
-    margin: 14px 16px 0; width: calc(100% - 32px);
-    padding: 14px; background: linear-gradient(135deg,#4f8ef7,#7c5cbf);
-    border: none; border-radius: 12px; color: white;
-    font-size: 15px; font-weight: 700; cursor: pointer; transition: opacity 0.2s;
-    display: flex; align-items: center; justify-content: center; gap: 8px;
+    margin:12px 14px 0; width:calc(100% - 28px);
+    padding:13px; background:linear-gradient(135deg,#4f8ef7,#7c5cbf);
+    border:none; border-radius:12px; color:white;
+    font-size:14px; font-weight:700; cursor:pointer; transition:opacity .2s;
+    display:flex; align-items:center; justify-content:center; gap:8px;
   }
-  .db-run-btn:active { opacity: 0.85; }
-  .db-run-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-  .db-sections { padding: 14px 16px; display: flex; flex-direction: column; gap: 12px; }
-  .db-section { border: 1px solid #e5e7eb; border-radius: 12px; overflow: hidden; }
-  .db-section-hd {
-    padding: 11px 14px; font-size: 13px; font-weight: 700;
-    display: flex; align-items: center; gap: 8px; cursor: pointer;
-    user-select: none; transition: background 0.15s;
-  }
-  .db-section-hd.seg  { background: #eef3ff; color: #4f8ef7; }
-  .db-section-hd.chrn { background: #fef2f2; color: #ef4444; }
-  .db-section-hd.mkt  { background: #f5f0ff; color: #7c5cbf; }
-  .db-section-hd:active { filter: brightness(0.95); }
-  .db-section-arrow { margin-left: auto; font-size: 11px; transition: transform 0.2s; }
-  .db-section.collapsed .db-section-arrow { transform: rotate(-90deg); }
-  .db-section-body {
-    padding: 14px; font-size: 13px; line-height: 1.75;
-    color: #333; white-space: pre-wrap; border-top: 1px solid #e5e7eb;
-    max-height: 320px; overflow-y: auto;
-  }
-  .db-section.collapsed .db-section-body { display: none; }
-  .db-loading {
-    padding: 40px 20px; text-align: center; color: #888; font-size: 14px;
-  }
+  .db-run-btn:active  { opacity:.85; }
+  .db-run-btn:disabled{ opacity:.45; cursor:not-allowed; }
+  /* 로딩 */
+  .db-loading { padding:36px 20px; text-align:center; }
   .db-spinner {
-    width: 36px; height: 36px; border: 3px solid #e5e7eb;
-    border-top-color: #4f8ef7; border-radius: 50%;
-    animation: spin 0.8s linear infinite; margin: 0 auto 14px;
+    width:38px; height:38px; border:3.5px solid #e5e7eb;
+    border-top-color:#4f8ef7; border-radius:50%;
+    animation:spin .75s linear infinite; margin:0 auto 14px;
   }
-  @keyframes spin { to { transform: rotate(360deg); } }
+  @keyframes spin { to{transform:rotate(360deg)} }
+  .db-loading-txt { font-size:13px; color:#666; line-height:1.6; }
+  /* 세그먼트 카드 */
+  .seg-cards { padding:12px 14px; display:flex; flex-direction:column; gap:8px; }
+  .seg-card {
+    background:white; border-radius:12px; padding:13px 14px;
+    border:1px solid #e5e7eb; box-shadow:0 1px 4px rgba(0,0,0,.05);
+  }
+  .seg-card-hd {
+    display:flex; align-items:center; justify-content:space-between;
+    margin-bottom:8px;
+  }
+  .seg-badge {
+    display:inline-flex; align-items:center; gap:5px;
+    font-size:12px; font-weight:700; padding:3px 10px;
+    border-radius:20px;
+  }
+  .seg-badge.premium { background:#fef9c3; color:#92400e; }
+  .seg-badge.good    { background:#dcfce7; color:#166534; }
+  .seg-badge.normal  { background:#dbeafe; color:#1e40af; }
+  .seg-badge.risk    { background:#fee2e2; color:#991b1b; }
+  .seg-n { font-size:12px; color:#888; }
+  .seg-bars { display:flex; flex-direction:column; gap:5px; }
+  .seg-bar-row { display:flex; align-items:center; gap:8px; font-size:11px; }
+  .seg-bar-lbl { width:56px; color:#666; flex-shrink:0; }
+  .seg-bar-bg  { flex:1; background:#f3f4f6; border-radius:4px; height:7px; overflow:hidden; }
+  .seg-bar-fill{ height:100%; border-radius:4px; transition:width .6s ease; }
+  .seg-bar-val { width:40px; text-align:right; color:#444; font-weight:600; }
+  /* 모델 비교 테이블 */
+  .model-table-wrap { padding:12px 14px; }
+  .model-table {
+    width:100%; border-collapse:collapse; font-size:12px;
+    background:white; border-radius:12px; overflow:hidden;
+    border:1px solid #e5e7eb; box-shadow:0 1px 4px rgba(0,0,0,.05);
+  }
+  .model-table th {
+    background:#f8f9ff; padding:9px 10px; text-align:center;
+    font-weight:700; color:#555; border-bottom:1px solid #e5e7eb;
+  }
+  .model-table td {
+    padding:9px 10px; text-align:center;
+    border-bottom:1px solid #f3f4f6; color:#333;
+  }
+  .model-table tr.best td { background:#fefce8; font-weight:700; }
+  .model-table tr:last-child td { border-bottom:none; }
+  .model-badge {
+    display:inline-block; background:#4f8ef7; color:white;
+    font-size:9px; padding:1px 5px; border-radius:8px; margin-left:4px;
+  }
+  /* 피처 중요도 */
+  .feature-wrap { padding:0 14px 12px; }
+  .feature-title { font-size:12px; font-weight:700; color:#555; margin-bottom:8px; padding-top:4px; }
+  .feature-row { display:flex; align-items:center; gap:8px; margin-bottom:6px; font-size:11px; }
+  .feature-lbl { width:80px; color:#444; flex-shrink:0; text-align:right; }
+  .feature-bar-bg { flex:1; background:#f3f4f6; border-radius:4px; height:8px; overflow:hidden; }
+  .feature-bar-fill { height:100%; border-radius:4px; }
+  .feature-pct { width:36px; font-weight:600; color:#444; }
+  /* AI 텍스트 분석 */
+  .ai-text-box {
+    margin:0 14px 12px; padding:14px; background:white;
+    border:1px solid #e5e7eb; border-radius:12px;
+    font-size:12.5px; line-height:1.75; color:#333;
+    max-height:280px; overflow-y:auto;
+    box-shadow:0 1px 4px rgba(0,0,0,.05);
+    white-space:pre-wrap;
+  }
+  .ai-text-box .ai-label {
+    font-size:11px; font-weight:700; color:#4f8ef7;
+    margin-bottom:8px; display:block;
+  }
+  /* ROI 시뮬레이터 */
+  .roi-box {
+    margin:0 14px 12px; padding:14px; background:white;
+    border:1px solid #e5e7eb; border-radius:12px;
+    box-shadow:0 1px 4px rgba(0,0,0,.05);
+  }
+  .roi-title { font-size:12px; font-weight:700; color:#555; margin-bottom:10px; }
+  .roi-inputs { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:10px; }
+  .roi-field label { display:block; font-size:10px; color:#888; margin-bottom:3px; }
+  .roi-field input {
+    width:100%; padding:7px 9px; border:1.5px solid #e5e7eb;
+    border-radius:8px; font-size:12px; outline:none;
+    transition:border-color .2s;
+  }
+  .roi-field input:focus { border-color:#4f8ef7; }
+  .roi-result-grid {
+    display:grid; grid-template-columns:repeat(3,1fr); gap:6px;
+  }
+  .roi-result-card {
+    background:#f8f9ff; border-radius:8px; padding:10px 6px; text-align:center;
+  }
+  .roi-result-val { font-size:15px; font-weight:700; color:#4f8ef7; }
+  .roi-result-val.highlight { color:#22c55e; }
+  .roi-result-lbl { font-size:10px; color:#888; margin-top:2px; }
+  /* 섹션 제목 */
+  .db-section-title {
+    font-size:13px; font-weight:700; color:#333;
+    padding:14px 14px 4px; display:flex; align-items:center; gap:6px;
+  }
+  /* 메일 버튼 */
   .db-mail-btn {
-    margin: 0 16px 16px; width: calc(100% - 32px);
-    padding: 13px; background: white;
-    border: 2px solid #4f8ef7; border-radius: 12px;
-    color: #4f8ef7; font-size: 14px; font-weight: 700;
-    cursor: pointer; transition: all 0.2s;
-    display: flex; align-items: center; justify-content: center; gap: 8px;
+    margin:4px 14px 14px; width:calc(100% - 28px);
+    padding:12px; background:white;
+    border:2px solid #4f8ef7; border-radius:12px;
+    color:#4f8ef7; font-size:13px; font-weight:700;
+    cursor:pointer; transition:all .2s;
+    display:flex; align-items:center; justify-content:center; gap:7px;
   }
-  .db-mail-btn:active { background: #eef3ff; }
-  .db-mail-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+  .db-mail-btn:active  { background:#eef3ff; }
+  .db-mail-btn:disabled{ opacity:.45; cursor:not-allowed; }
   .db-mail-result {
-    margin: 0 16px 16px; padding: 12px 14px;
-    border-radius: 10px; font-size: 13px; text-align: center;
+    margin:0 14px 14px; padding:11px 14px;
+    border-radius:10px; font-size:12px; text-align:center;
   }
-  .db-mail-result.ok  { background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; }
-  .db-mail-result.err { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
+  .db-mail-result.ok  { background:#f0fdf4; color:#16a34a; border:1px solid #bbf7d0; }
+  .db-mail-result.err { background:#fef2f2; color:#dc2626; border:1px solid #fecaca; }
+  /* Chart 캔버스 */
+  .db-chart-wrap { padding:4px 14px 10px; }
+  .db-chart-wrap canvas { max-height:200px; }
   /* 대시보드 버튼 (앱바에) */
   .dashboard-btn {
     padding: 6px 12px; background: linear-gradient(135deg,#4f8ef7,#7c5cbf);
@@ -413,57 +517,100 @@
 <div class="dashboard-overlay" id="dashboardOverlay" onclick="closeDashboardOutside(event)">
   <div class="dashboard-panel" id="dashboardPanel">
 
+    <!-- 헤더 -->
     <div class="db-header">
-      <div>
+      <div class="db-header-left">
         <h2>📊 인터랙티브 대시보드</h2>
-        <p id="dbHeaderSub">E-Commerce 고객 분석 · AI 기반 인사이트</p>
+        <p id="dbHeaderSub">50,000명 E-Commerce 고객 · AI 분석</p>
       </div>
       <button class="db-close" onclick="closeDashboard()">✕</button>
     </div>
 
-    <!-- 핵심 지표 요약 -->
-    <div class="db-stats" id="dbStats"></div>
+    <!-- 핵심 지표 카드 -->
+    <div class="db-stat-grid" id="dbStatGrid"></div>
 
     <!-- AI 분석 실행 버튼 -->
     <button class="db-run-btn" id="dbRunBtn" onclick="runDashboard()">
-      🤖 AI 분석 실행 (고객분석 · 이탈예측 · 마케팅최적화)
+      🤖 AI 분석 실행 — 고객분석 · 이탈예측 · 마케팅최적화
     </button>
 
-    <!-- 분석 결과 섹션 -->
-    <div class="db-sections" id="dbSections" style="display:none">
-
-      <div class="db-section" id="dbSeg">
-        <div class="db-section-hd seg" onclick="toggleDbSection('dbSeg')">
-          🎯 1. 고객 분석 및 세분화
-          <span class="db-section-arrow">▼</span>
-        </div>
-        <div class="db-section-body" id="dbSegBody"></div>
-      </div>
-
-      <div class="db-section" id="dbChrn">
-        <div class="db-section-hd chrn" onclick="toggleDbSection('dbChrn')">
-          ⚠️ 2. 고객 이탈 예측 모델링
-          <span class="db-section-arrow">▼</span>
-        </div>
-        <div class="db-section-body" id="dbChrnBody"></div>
-      </div>
-
-      <div class="db-section" id="dbMkt">
-        <div class="db-section-hd mkt" onclick="toggleDbSection('dbMkt')">
-          💡 3. 마케팅 최적화 방안
-          <span class="db-section-arrow">▼</span>
-        </div>
-        <div class="db-section-body" id="dbMktBody"></div>
-      </div>
-    </div>
-
-    <!-- 로딩 표시 -->
+    <!-- 로딩 -->
     <div class="db-loading" id="dbLoading" style="display:none">
       <div class="db-spinner"></div>
-      <div id="dbLoadingMsg">AI가 3개 섹션을 동시 분석 중입니다...<br><small>약 20~40초 소요됩니다</small></div>
+      <div class="db-loading-txt" id="dbLoadingMsg">
+        AI가 3개 섹션을 동시 분석 중입니다...<br>
+        <small>약 20~40초 소요됩니다</small>
+      </div>
     </div>
 
-    <!-- 메일 발송 버튼 -->
+    <!-- 탭 -->
+    <div class="db-tabs" id="dbTabs" style="display:none">
+      <button class="db-tab active" onclick="switchTab(0)">🎯 고객분석</button>
+      <button class="db-tab"        onclick="switchTab(1)">⚠️ 이탈예측</button>
+      <button class="db-tab"        onclick="switchTab(2)">💡 마케팅</button>
+    </div>
+
+    <!-- 탭0: 고객 분석 및 세분화 -->
+    <div class="db-tab-content active" id="dbTab0">
+      <div class="db-section-title">🎯 고객 세분화 (K-Means 4개 클러스터)</div>
+      <div class="seg-cards" id="segCards"></div>
+      <div class="db-chart-wrap">
+        <canvas id="segChart" height="180"></canvas>
+      </div>
+      <div class="db-section-title">📝 AI 분석 요약</div>
+      <div class="ai-text-box" id="dbSegText"><span style="color:#aaa">분석 실행 후 표시됩니다</span></div>
+    </div>
+
+    <!-- 탭1: 이탈 예측 모델링 -->
+    <div class="db-tab-content" id="dbTab1">
+      <div class="db-section-title">🤖 모델 성능 비교</div>
+      <div class="model-table-wrap">
+        <table class="model-table" id="modelTable">
+          <thead>
+            <tr><th>모델</th><th>AUC</th><th>정확도</th><th>F1</th><th>AP</th></tr>
+          </thead>
+          <tbody id="modelTableBody"></tbody>
+        </table>
+      </div>
+      <div class="db-section-title">📊 피처 중요도 Top 8</div>
+      <div class="feature-wrap" id="featureWrap"></div>
+      <div class="db-section-title">📝 AI 분석 요약</div>
+      <div class="ai-text-box" id="dbChrnText"><span style="color:#aaa">분석 실행 후 표시됩니다</span></div>
+    </div>
+
+    <!-- 탭2: 마케팅 최적화 -->
+    <div class="db-tab-content" id="dbTab2">
+      <div class="db-section-title">📈 연령대별 이탈률</div>
+      <div class="db-chart-wrap">
+        <canvas id="ageChart" height="160"></canvas>
+      </div>
+      <div class="db-section-title">💰 ROI 시뮬레이터</div>
+      <div class="roi-box" id="roiBox">
+        <div class="roi-inputs">
+          <div class="roi-field">
+            <label>대상 고객 수</label>
+            <input type="number" id="roiN" value="10000" oninput="calcROI()">
+          </div>
+          <div class="roi-field">
+            <label>전환율 (%)</label>
+            <input type="number" id="roiConv" value="20" oninput="calcROI()">
+          </div>
+          <div class="roi-field">
+            <label>인당 캠페인 비용 ($)</label>
+            <input type="number" id="roiCost" value="25" oninput="calcROI()">
+          </div>
+          <div class="roi-field">
+            <label>평균 LTV ($)</label>
+            <input type="number" id="roiLTV" value="1441" oninput="calcROI()">
+          </div>
+        </div>
+        <div class="roi-result-grid" id="roiResults"></div>
+      </div>
+      <div class="db-section-title">📝 AI 분석 요약</div>
+      <div class="ai-text-box" id="dbMktText"><span style="color:#aaa">분석 실행 후 표시됩니다</span></div>
+    </div>
+
+    <!-- 메일 발송 -->
     <button class="db-mail-btn" id="dbMailBtn" onclick="sendDashboardMail()" style="display:none">
       📧 분석 결과 메일 발송 (12명)
     </button>
@@ -1391,123 +1538,281 @@ function showToast(msg) {
 
 
 // ═══════════════════════════════════════════════════════
-// 인터랙티브 대시보드
+// 인터랙티브 대시보드 — 시각화 + AI 분석
 // ═══════════════════════════════════════════════════════
-let dashboardData = null;  // 마지막 분석 결과 보관
+let dashboardData  = null;
+let dashboardReady = false;
+let activeTab      = 0;
+let dbCharts       = {};  // Chart.js 인스턴스
 
+// ── 열기/닫기 ──
 function openDashboard() {
-  const overlay = document.getElementById('dashboardOverlay');
-  overlay.classList.add('open');
+  document.getElementById('dashboardOverlay').classList.add('open');
   document.body.style.overflow = 'hidden';
-  // 서버 통계로 핵심 지표 채우기
   renderDbStats();
+  calcROI();
 }
-
 function closeDashboard() {
   document.getElementById('dashboardOverlay').classList.remove('open');
   document.body.style.overflow = '';
 }
-
 function closeDashboardOutside(e) {
   if (e.target === document.getElementById('dashboardOverlay')) closeDashboard();
 }
 
+// ── 핵심 지표 카드 ──
 function renderDbStats() {
-  const el = document.getElementById('dbStats');
+  const el = document.getElementById('dbStatGrid');
   if (!el || !serverStats) return;
   const s = serverStats;
-  const isKo = lang === 'ko';
-  el.innerHTML = `
-    <div class="db-stat">
-      <div class="db-stat-val">${s.overview.total.toLocaleString()}</div>
-      <div class="db-stat-lbl">${isKo?'총 고객':'Customers'}</div>
-    </div>
-    <div class="db-stat">
-      <div class="db-stat-val danger">${s.overview.churn_rate}%</div>
-      <div class="db-stat-lbl">${isKo?'이탈률':'Churn Rate'}</div>
-    </div>
-    <div class="db-stat">
-      <div class="db-stat-val">$${s.avg_metrics?.Lifetime_Value?.overall || '-'}</div>
-      <div class="db-stat-lbl">${isKo?'평균 LTV':'Avg LTV'}</div>
-    </div>
-    <div class="db-stat">
-      <div class="db-stat-val">${s.overview.active.toLocaleString()}</div>
-      <div class="db-stat-lbl">${isKo?'유지 고객':'Active'}</div>
-    </div>
-  `;
+  el.innerHTML = [
+    { v: s.overview.total.toLocaleString(), l: '총 고객', cls: '' },
+    { v: s.overview.churn_rate + '%',       l: '이탈률',  cls: 'red' },
+    { v: s.overview.active.toLocaleString(),l: '유지 고객',cls: 'grn' },
+    { v: '$' + (s.avg_metrics?.Lifetime_Value?.overall || '-'), l: '평균 LTV', cls: 'pur' },
+  ].map(c => `<div class="db-stat-card">
+    <div class="db-stat-val ${c.cls}">${c.v}</div>
+    <div class="db-stat-lbl">${c.l}</div>
+  </div>`).join('');
 }
 
-function toggleDbSection(id) {
-  const sec = document.getElementById(id);
-  sec.classList.toggle('collapsed');
+// ── 탭 전환 ──
+function switchTab(idx) {
+  activeTab = idx;
+  document.querySelectorAll('.db-tab').forEach((t,i) =>
+    t.classList.toggle('active', i===idx));
+  document.querySelectorAll('.db-tab-content').forEach((c,i) =>
+    c.classList.toggle('active', i===idx));
 }
 
+// ── 세그먼트 카드 렌더 ──
+function renderSegCards(kmeans) {
+  const segs = [
+    { key:'seg2', badge:'premium', icon:'💎', label:'프리미엄 소수' },
+    { key:'seg1', badge:'good',    icon:'⭐', label:'우수 고객' },
+    { key:'seg0', badge:'normal',  icon:'👥', label:'일반 충성 고객' },
+    { key:'seg3', badge:'risk',    icon:'⚠️', label:'이탈 위험 고객' },
+  ];
+  const wrap = document.getElementById('segCards');
+  wrap.innerHTML = segs.map(s => {
+    const d = kmeans[s.key];
+    const churnW = Math.min(d.churn, 100);
+    const ltvW   = Math.min(d.ltv / 80, 100);
+    const loginW = Math.min(d.login / 25 * 100, 100);
+    return `<div class="seg-card">
+      <div class="seg-card-hd">
+        <span class="seg-badge ${s.badge}">${s.icon} ${d.name}</span>
+        <span class="seg-n">${d.n.toLocaleString()}명</span>
+      </div>
+      <div class="seg-bars">
+        <div class="seg-bar-row">
+          <span class="seg-bar-lbl">이탈률</span>
+          <div class="seg-bar-bg"><div class="seg-bar-fill" style="width:${churnW}%;background:${d.churn>35?'#ef4444':d.churn>25?'#f59e0b':'#22c55e'}"></div></div>
+          <span class="seg-bar-val">${d.churn}%</span>
+        </div>
+        <div class="seg-bar-row">
+          <span class="seg-bar-lbl">LTV</span>
+          <div class="seg-bar-bg"><div class="seg-bar-fill" style="width:${ltvW}%;background:#4f8ef7"></div></div>
+          <span class="seg-bar-val">$${d.ltv}</span>
+        </div>
+        <div class="seg-bar-row">
+          <span class="seg-bar-lbl">로그인/월</span>
+          <div class="seg-bar-bg"><div class="seg-bar-fill" style="width:${loginW}%;background:#7c5cbf"></div></div>
+          <span class="seg-bar-val">${d.login}회</span>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── 세그먼트 도넛 차트 ──
+function renderSegChart(kmeans) {
+  const ctx = document.getElementById('segChart');
+  if (!ctx) return;
+  if (dbCharts.seg) { dbCharts.seg.destroy(); }
+  dbCharts.seg = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: ['우수 고객','일반 충성','이탈 위험','프리미엄'],
+      datasets: [{
+        data: [kmeans.seg1.n, kmeans.seg0.n, kmeans.seg3.n, kmeans.seg2.n],
+        backgroundColor: ['#22c55e','#4f8ef7','#ef4444','#f59e0b'],
+        borderWidth: 2, borderColor: '#f6f7fb'
+      }]
+    },
+    options: {
+      responsive:true, maintainAspectRatio:true, cutout:'60%',
+      plugins:{
+        legend:{ position:'right', labels:{ font:{size:10}, boxWidth:12 } },
+        tooltip:{ callbacks:{ label: ctx => ` ${ctx.label}: ${ctx.formattedValue}명` } }
+      }
+    }
+  });
+}
+
+// ── 모델 성능 테이블 ──
+function renderModelTable(models) {
+  const tbody = document.getElementById('modelTableBody');
+  const rows = [
+    { k:'logistic', d:models.logistic },
+    { k:'rf',       d:models.rf },
+    { k:'gb',       d:models.gb,  best:true },
+    { k:'xgb',      d:models.xgb },
+  ];
+  tbody.innerHTML = rows.map(r => `
+    <tr class="${r.best?'best':''}">
+      <td style="text-align:left">${r.d.name}${r.best?'<span class="model-badge">최선</span>':''}</td>
+      <td>${r.d.auc}</td>
+      <td>${(r.d.acc*100).toFixed(1)}%</td>
+      <td>${r.d.f1}</td>
+      <td>${r.d.ap}</td>
+    </tr>`).join('');
+}
+
+// ── 피처 중요도 바 ──
+function renderFeatures(features) {
+  const wrap = document.getElementById('featureWrap');
+  const colors = ['#ef4444','#f59e0b','#f97316','#4f8ef7','#22c55e','#7c5cbf','#06b6d4','#84cc16'];
+  wrap.innerHTML = features.map((f,i) => `
+    <div class="feature-row">
+      <span class="feature-lbl">${f.name}</span>
+      <div class="feature-bar-bg">
+        <div class="feature-bar-fill" style="width:${f.imp/15*100}%;background:${colors[i]};height:100%;border-radius:4px;transition:width .6s ease"></div>
+      </div>
+      <span class="feature-pct">${f.imp}%</span>
+    </div>`).join('');
+}
+
+// ── 연령대 차트 ──
+function renderAgeChart(age_bands) {
+  const ctx = document.getElementById('ageChart');
+  if (!ctx) return;
+  if (dbCharts.age) { dbCharts.age.destroy(); }
+  const bands = Object.entries(age_bands);
+  dbCharts.age = new Chart(ctx, {
+    type:'bar',
+    data:{
+      labels: bands.map(([k])=>k+'세'),
+      datasets:[
+        { label:'고객 수',    data:bands.map(([,v])=>v.t), backgroundColor:'rgba(79,142,247,0.6)', borderRadius:4, yAxisID:'y' },
+        { label:'이탈률(%)',  data:bands.map(([,v])=>v.rate), backgroundColor:'rgba(239,68,68,0.8)', borderRadius:4, type:'line', borderColor:'#ef4444', borderWidth:2, pointRadius:4, fill:false, yAxisID:'y1' }
+      ]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:true,
+      plugins:{ legend:{ position:'bottom', labels:{font:{size:10},boxWidth:12} } },
+      scales:{
+        y:  { beginAtZero:true, position:'left',  grid:{color:'#f0f0f0'}, ticks:{font:{size:10}} },
+        y1: { beginAtZero:true, position:'right', grid:{drawOnChartArea:false}, ticks:{font:{size:10}, callback:v=>v+'%'} },
+        x:  { grid:{display:false}, ticks:{font:{size:10}} }
+      }
+    }
+  });
+}
+
+// ── ROI 시뮬레이터 ──
+function calcROI() {
+  const n    = parseInt(document.getElementById('roiN')?.value)    || 10000;
+  const conv = parseFloat(document.getElementById('roiConv')?.value)/ 100 || 0.20;
+  const cost = parseFloat(document.getElementById('roiCost')?.value)|| 25;
+  const ltv  = parseFloat(document.getElementById('roiLTV')?.value) || 1441;
+
+  const totalCost     = n * cost;
+  const recovered     = Math.round(n * conv);
+  const ltvRecovered  = Math.round(recovered * ltv);
+  const roi           = Math.round((ltvRecovered - totalCost) / totalCost * 100);
+
+  const el = document.getElementById('roiResults');
+  if (!el) return;
+  el.innerHTML = [
+    { v:'$'+totalCost.toLocaleString(),       l:'캠페인 비용',    cls:'' },
+    { v:recovered.toLocaleString()+'명',      l:'전환 예상',       cls:'' },
+    { v:'$'+ltvRecovered.toLocaleString(),    l:'LTV 회복액',     cls:'highlight' },
+  ].map(c=>`<div class="roi-result-card">
+    <div class="roi-result-val ${c.cls}">${c.v}</div>
+    <div class="roi-result-lbl">${c.l}</div>
+  </div>`).join('') +
+  `<div class="roi-result-card" style="grid-column:1/-1;background:#f0fdf4;border:1px solid #bbf7d0">
+    <div class="roi-result-val highlight" style="font-size:22px">ROI ${roi}%</div>
+    <div class="roi-result-lbl">예상 투자 수익률</div>
+  </div>`;
+}
+
+// ── 메인 분석 실행 ──
 async function runDashboard() {
-  const runBtn   = document.getElementById('dbRunBtn');
-  const loading  = document.getElementById('dbLoading');
-  const sections = document.getElementById('dbSections');
-  const mailBtn  = document.getElementById('dbMailBtn');
-  const mailRes  = document.getElementById('dbMailResult');
+  const runBtn  = document.getElementById('dbRunBtn');
+  const loading = document.getElementById('dbLoading');
+  const tabs    = document.getElementById('dbTabs');
+  const mailBtn = document.getElementById('dbMailBtn');
+  const mailRes = document.getElementById('dbMailResult');
 
   runBtn.disabled = true;
-  sections.style.display = 'none';
-  mailBtn.style.display  = 'none';
-  mailRes.style.display  = 'none';
-  loading.style.display  = 'block';
+  tabs.style.display = 'none';
+  mailBtn.style.display = 'none';
+  mailRes.style.display = 'none';
+  loading.style.display = 'block';
 
-  const isKo = lang === 'ko';
-  document.getElementById('dbLoadingMsg').innerHTML =
-    (isKo ? 'AI가 3개 섹션을 동시 분석 중입니다...' : 'AI analyzing 3 sections in parallel...')
-    + '<br><small>' + (isKo ? '약 20~40초 소요됩니다' : 'Takes ~20-40 seconds') + '</small>';
+  // 탭0 초기화
+  switchTab(0);
 
   try {
     const res = await fetch(`${BACKEND_URL}/api/dashboard`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
       body: JSON.stringify({ apiKey, lang })
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Analysis failed');
 
     dashboardData = data;
-
-    // 결과 채우기
-    document.getElementById('dbSegBody').textContent  = data.segmentation;
-    document.getElementById('dbChrnBody').textContent = data.churn;
-    document.getElementById('dbMktBody').textContent  = data.marketing;
-
-    loading.style.display  = 'none';
-    sections.style.display = 'flex';
+    loading.style.display = 'none';
+    tabs.style.display     = 'flex';
     mailBtn.style.display  = 'block';
     runBtn.disabled = false;
-    runBtn.textContent = isKo ? '🔄 재분석' : '🔄 Re-analyze';
+    runBtn.textContent = '🔄 재분석';
 
-    showToast(isKo ? '✅ 분석 완료!' : '✅ Analysis complete!');
+    // 시각화 렌더
+    renderSegCards(data.kmeans);
+    setTimeout(() => renderSegChart(data.kmeans), 80);
+    renderModelTable(data.models);
+    renderFeatures(data.features);
+    setTimeout(() => renderAgeChart(data.age_bands), 80);
+    calcROI();
 
+    // AI 텍스트
+    document.getElementById('dbSegText').textContent  = data.segmentation;
+    document.getElementById('dbChrnText').textContent = data.churn;
+    document.getElementById('dbMktText').textContent  = data.marketing;
+
+    // ROI LTV 자동 업데이트
+    if (data.metrics?.Lifetime_Value?.overall) {
+      document.getElementById('roiLTV').value = Math.round(data.metrics.Lifetime_Value.overall);
+      calcROI();
+    }
+
+    showToast(lang==='ko' ? '✅ 분석 완료!' : '✅ Analysis complete!');
   } catch(e) {
     loading.style.display = 'none';
     runBtn.disabled = false;
-    showToast((isKo ? '❌ 분석 오류: ' : '❌ Error: ') + e.message);
+    showToast((lang==='ko'?'❌ 오류: ':'❌ Error: ') + e.message);
   }
 }
 
+// ── 메일 발송 ──
 async function sendDashboardMail() {
-  if (!dashboardData) {
-    showToast(lang==='ko' ? '먼저 분석을 실행하세요' : 'Run analysis first');
-    return;
-  }
+  if (!dashboardData) { showToast('먼저 분석을 실행하세요'); return; }
   const mailBtn = document.getElementById('dbMailBtn');
   const mailRes = document.getElementById('dbMailResult');
   const isKo    = lang === 'ko';
 
   mailBtn.disabled = true;
-  mailBtn.textContent = isKo ? '📧 발송 중...' : '📧 Sending...';
+  mailBtn.innerHTML = '📧 ' + (isKo ? '발송 중...' : 'Sending...');
   mailRes.style.display = 'none';
 
   try {
     const res = await fetch(`${BACKEND_URL}/api/send-report`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
       body: JSON.stringify({
         segmentation: dashboardData.segmentation,
         churn:        dashboardData.churn,
@@ -1518,18 +1823,17 @@ async function sendDashboardMail() {
     const data = await res.json();
     if (!res.ok) throw new Error(data.error);
 
-    mailRes.className = 'db-mail-result ok';
-    mailRes.innerHTML = isKo
-      ? `✅ 발송 완료: ${data.sent}명 성공${data.failed > 0 ? ` / ${data.failed}명 실패` : ''}`
-      : `✅ Sent: ${data.sent} ok${data.failed > 0 ? ` / ${data.failed} failed` : ''}`;
+    mailRes.className   = 'db-mail-result ok';
+    mailRes.textContent = isKo
+      ? `✅ 발송 완료: ${data.sent}명 성공${data.failed>0?` / ${data.failed}명 실패`:''}`
+      : `✅ Sent: ${data.sent}${data.failed>0?` / ${data.failed} failed`:''}`;
     mailRes.style.display = 'block';
-    mailBtn.textContent = isKo ? '📧 메일 재발송' : '📧 Resend';
-
+    mailBtn.innerHTML   = '📧 ' + (isKo ? '메일 재발송' : 'Resend');
   } catch(e) {
-    mailRes.className = 'db-mail-result err';
-    mailRes.textContent = (isKo ? '❌ 발송 실패: ' : '❌ Send failed: ') + e.message;
+    mailRes.className   = 'db-mail-result err';
+    mailRes.textContent = (isKo?'❌ 발송 실패: ':'❌ Failed: ') + e.message;
     mailRes.style.display = 'block';
-    mailBtn.textContent = isKo ? '📧 분석 결과 메일 발송' : '📧 Send Report';
+    mailBtn.innerHTML   = '📧 ' + (isKo ? '분석 결과 메일 발송 (12명)' : 'Send Report (12)');
   }
   mailBtn.disabled = false;
 }
