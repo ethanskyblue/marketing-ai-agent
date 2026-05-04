@@ -25,71 +25,77 @@
   body { font-family: 'Segoe UI', 'Nanum Gothic', 'Apple SD Gothic Neo', sans-serif;
          background: var(--surface); color: var(--text); min-height: 100vh; overflow-x: hidden; }
 
-  /* ─── LOCK SCREEN ─── */
+  /* ─── LOCK SCREEN (동의보감 앱 동일 구조) ─── */
   #lockScreen {
     position: fixed; inset: 0; z-index: 100;
-    background: #ffffff;
-    display: flex; flex-direction: column; align-items: center; justify-content: center;
-    gap: 0;
+    background: linear-gradient(160deg,#0f1a2e 0%,#1a2a4a 50%,#0f1a2e 100%);
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    padding:40px 32px; transition:opacity 0.4s;
   }
-  .lock-app-name {
-    font-size: 26px; font-weight: 700; color: #2eaa7c;
-    text-align: center; margin-bottom: 8px; letter-spacing: -0.3px;
+  #lockScreen.hidden { opacity:0; pointer-events:none; }
+  .lock-app-name { color:#fff; font-size:22px; font-weight:700; margin-bottom:6px; text-align:center; }
+  .lock-sub-name { color:rgba(255,255,255,0.4); font-size:11px; margin-bottom:44px; text-align:center; line-height:1.5; }
+  .fp-circle-btn {
+    width:140px; height:140px; border-radius:50%;
+    background:radial-gradient(circle at 38% 38%,rgba(79,142,247,0.18),rgba(15,26,46,0.85));
+    cursor:pointer; display:flex; align-items:center; justify-content:center;
+    position:relative; transition:all 0.2s; border:none; outline:none; margin-bottom:10px;
+    box-shadow:0 0 0 2.5px rgba(79,142,247,0.45),0 0 0 16px rgba(79,142,247,0.06),0 8px 32px rgba(0,0,0,0.5);
   }
-  .lock-title {
-    font-size: 16px; font-weight: 400; color: #888;
-    text-align: center; margin-bottom: 40px; line-height: 1.4;
-    padding: 0 24px;
+  .fp-circle-btn:active { transform:scale(0.93); }
+  .fp-circle-btn:disabled { opacity:0.4; cursor:not-allowed; }
+  .fp-circle-btn::before,.fp-circle-btn::after {
+    content:''; position:absolute; border-radius:50%;
+    border:1.5px solid rgba(79,142,247,0.2); width:100%; height:100%;
+    animation:fpRipple 2.8s ease-out infinite; pointer-events:none;
   }
-  /* Fingerprint */
-  .fp-wrap { display: flex; flex-direction: column; align-items: center; gap: 32px; }
-  /* 손가락 원형 버튼 — 첨부 이미지 스타일 */
-  .fp-btn {
-    width: 170px; height: 170px; position: relative;
-    display: flex; align-items: center; justify-content: center;
-    cursor: pointer; border: none; background: none; padding: 0;
-    -webkit-tap-highlight-color: transparent;
+  .fp-circle-btn::after { animation-delay:1.4s; }
+  @keyframes fpRipple { 0%{transform:scale(1);opacity:0.7} 100%{transform:scale(1.75);opacity:0} }
+  .fp-emoji { font-size:60px; line-height:1; }
+  .fp-label { color:rgba(255,255,255,0.7); font-size:14px; font-weight:600; margin-bottom:28px; letter-spacing:0.3px; }
+  .key-panel {
+    width:100%; max-width:310px;
+    background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12);
+    border-radius:18px; padding:20px 18px;
+    display:none; flex-direction:column; gap:12px; margin-bottom:16px;
   }
-  .fp-circle {
-    width: 170px; height: 170px; border-radius: 50%;
-    background: #e8f5f0; border: 4px solid #2eaa7c;
-    display: flex; align-items: center; justify-content: center;
-    transition: all 0.2s; box-shadow: 0 4px 20px rgba(46,170,124,0.15);
+  .key-panel.open { display:flex; }
+  .key-panel-title { color:rgba(255,255,255,0.8); font-size:13px; font-weight:600; text-align:center; }
+  .key-input-wrap { position:relative; }
+  .key-input {
+    width:100%; background:rgba(255,255,255,0.09); border:1.5px solid rgba(255,255,255,0.2);
+    border-radius:11px; padding:12px 40px 12px 13px; color:#fff; font-size:13px;
+    font-family:'Courier New',monospace; outline:none;
   }
-  .fp-btn:active .fp-circle { transform: scale(0.94); background: #d4ede5; }
-  .fp-emoji { font-size: 80px; line-height: 1; user-select: none; }
-
-  .fp-btn.scanning .fp-circle {
-    border-color: #4f8ef7; background: #e8f0ff;
-    animation: scanPulse 0.8s ease-in-out infinite;
+  .key-input::placeholder { color:rgba(255,255,255,0.28); }
+  .key-input:focus { border-color:#4f8ef7; }
+  .key-toggle { position:absolute; right:11px; top:50%; transform:translateY(-50%); background:none; border:none; color:rgba(255,255,255,0.4); cursor:pointer; font-size:15px; }
+  .btn-save {
+    width:100%; border:none; border-radius:11px; padding:13px;
+    background:linear-gradient(135deg,#4f8ef7,#7c5cbf); color:#fff;
+    font-size:14px; font-weight:700; cursor:pointer;
+    box-shadow:0 4px 14px rgba(79,142,247,0.4); transition:all 0.2s;
+    display:flex; align-items:center; justify-content:center; gap:8px;
   }
-  @keyframes scanPulse {
-    0%,100%{ box-shadow: 0 0 0 0 rgba(79,142,247,0.35); }
-    50%    { box-shadow: 0 0 0 14px rgba(79,142,247,0); }
+  .btn-save:active { transform:scale(0.97); }
+  .btn-save:disabled { opacity:0.45; cursor:not-allowed; }
+  .key-note { color:rgba(255,255,255,0.28); font-size:10px; text-align:center; line-height:1.6; }
+  .lock-status { font-size:13px; min-height:20px; text-align:center; margin-bottom:12px; transition:all 0.3s; }
+  .lock-status.ok   { color:#86efac; }
+  .lock-status.err  { color:#fca5a5; }
+  .lock-status.info { color:rgba(255,255,255,0.55); }
+  .btn-reset {
+    width:100%; max-width:310px; border:1.5px solid rgba(255,255,255,0.15);
+    background:rgba(255,255,255,0.06); border-radius:12px; padding:13px;
+    color:rgba(255,255,255,0.6); font-size:13px; font-weight:600; cursor:pointer;
+    transition:all 0.2s; display:flex; align-items:center; justify-content:center; gap:7px;
   }
-  .fp-btn.success .fp-circle { border-color: #22c55e; background: #e8fdf0; }
-  .fp-btn.error   .fp-circle { border-color: #ef4444; background: #fff0f0; }
-
-  .fp-status { height: 26px; font-size: 13px; color: #999; text-align: center; }
-  .fp-status.scanning { color: #4f8ef7; font-weight: 500; }
-  .fp-status.success  { color: #22c55e; font-weight: 500; }
-  .fp-status.error    { color: #ef4444; }
-
-  .reset-api-btn {
-    margin-top: 8px; width: 280px; padding: 16px 24px;
-    background: white; border: 1.5px solid #e0e0e0; border-radius: 16px;
-    font-size: 16px; font-weight: 500; color: #4a4a4a;
-    cursor: pointer; transition: all 0.18s;
-    display: flex; align-items: center; justify-content: center; gap: 8px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-  }
-  .reset-api-btn:active { background: #f5f5f5; border-color: #bbb; }
-
+  .btn-reset:active { background:rgba(255,255,255,0.12); color:rgba(255,255,255,0.9); }
   .lang-btn-lock {
-    position: absolute; top: 18px; right: 18px; z-index: 10;
-    background: #f5f5f5; border: 1px solid #e0e0e0;
-    color: #666; padding: 7px 16px;
-    border-radius: 20px; font-size: 12px; cursor: pointer; font-weight: 500;
+    position:absolute; top:18px; right:18px; z-index:10;
+    background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.2);
+    color:rgba(255,255,255,0.7); padding:7px 16px;
+    border-radius:20px; font-size:12px; cursor:pointer; font-weight:500;
   }
 
 
@@ -309,27 +315,32 @@
 <div id="lockScreen">
   <button class="lang-btn-lock" onclick="toggleLang()">KO / EN</button>
 
-  <!-- 앱 이름 -->
-  <div class="lock-app-name">마케팅 AI 에이전트</div>
+  <div class="lock-app-name">📊 마케팅 AI 에이전트</div>
+  <div class="lock-sub-name">E-Commerce 고객 분석 · 이탈 예측 · 마케팅 최적화</div>
 
-  <!-- 안내 텍스트 -->
-  <div class="lock-title" id="lockTitle">지문 인식으로 잠금을 해제하세요</div>
+  <button class="fp-circle-btn" id="btnFP" onclick="onFPClick()">
+    <span class="fp-emoji">☝️</span>
+  </button>
+  <div class="fp-label" id="fpLabel">지문으로 시작하기</div>
 
-  <div class="fp-wrap">
-    <!-- 손가락 이모지 원형 버튼 -->
-    <button class="fp-btn" id="fpBtn" onclick="doAuth()">
-      <div class="fp-circle">
-        <span class="fp-emoji">☝️</span>
-      </div>
+  <div class="key-panel" id="keyPanel">
+    <div class="key-panel-title">🔑 Anthropic API 키 등록</div>
+    <div class="key-input-wrap">
+      <input class="key-input" type="password" id="apiKeyInput"
+        placeholder="sk-ant-api03-..." autocomplete="off" spellcheck="false" />
+      <button class="key-toggle" onclick="toggleKeyVis()">👁</button>
+    </div>
+    <button class="btn-save" id="btnSave" onclick="registerKey()">
+      ☝️ 지문으로 암호화 저장
     </button>
-
-    <div class="fp-status" id="fpStatus"></div>
-
-    <!-- API 키 재설정 버튼 -->
-    <button class="reset-api-btn" id="resetApiBtn" onclick="openApiModal()">
-      ⚙️ <span id="resetApiBtn_label">API 키 재설정</span>
-    </button>
+    <div class="key-note">🔒 AES-256 암호화 · 지문인증 보호 · 서버 미전송</div>
   </div>
+
+  <div class="lock-status info" id="lockStatus">&nbsp;</div>
+
+  <button class="btn-reset" id="resetApiBtn" onclick="openResetPanel()">
+    ⚙️ API 키 재설정
+  </button>
 </div>
 
 <!-- API Modal -->
@@ -400,7 +411,7 @@ const BACKEND_URL = window.location.origin;  // 같은 서버에서 serve
 
 // ═══ STATE ═══
 let lang = 'ko';
-let apiKey = localStorage.getItem('mkt_key') || '';
+let apiKey = '';  // WebAuthn 인증 후 _runtimeKey와 동기화
 let history = [];   // {role, content}
 let allMsgs = [];   // {role, text} for PDF
 let serverStats = null;
@@ -487,216 +498,212 @@ function toggleChipsTray() {
   arrow.textContent = isNowCollapsed ? '▲' : '▼';
 }
 
-// ═══ FINGERPRINT AUTH (WebAuthn — 실제 기기 지문/Face ID) ═══
+// ══════════════════════════════════════════════════════════
+//  WebAuthn + AES-256-GCM 보안 모듈 (동의보감 앱 동일 구조)
+// ══════════════════════════════════════════════════════════
+const DB_NAME   = 'mkt_vault';
+const DB_VER    = 1;
+const DB_STORE  = 'keys';
+const VAULT_KEY = 'api_key_enc';
+const CRED_KEY  = 'webauthn_cred';
+const RP_ID     = location.hostname || 'localhost';
+const RP_NAME   = '마케팅 AI 에이전트';
 
-// WebAuthn 등록 여부 확인
-function hasCredential() {
-  return !!localStorage.getItem('mkt_cred_id');
+let _runtimeKey = null;  // 복호화된 API 키 — 메모리에만 보관
+
+// ── IndexedDB ──
+function openDB() {
+  return new Promise((res, rej) => {
+    const req = indexedDB.open(DB_NAME, DB_VER);
+    req.onupgradeneeded = e => e.target.result.createObjectStore(DB_STORE, { keyPath: 'id' });
+    req.onsuccess = e => res(e.target.result);
+    req.onerror   = e => rej(e.target.error);
+  });
+}
+async function dbGet(id) {
+  const db = await openDB();
+  return new Promise((res, rej) => {
+    const tx  = db.transaction(DB_STORE, 'readonly');
+    const req = tx.objectStore(DB_STORE).get(id);
+    req.onsuccess = e => res(e.target.result?.value ?? null);
+    req.onerror   = e => rej(e.target.error);
+  });
+}
+async function dbSet(id, value) {
+  const db = await openDB();
+  return new Promise((res, rej) => {
+    const tx = db.transaction(DB_STORE, 'readwrite');
+    tx.objectStore(DB_STORE).put({ id, value });
+    tx.oncomplete = res;
+    tx.onerror    = e => rej(e.target.error);
+  });
 }
 
-// 애니메이션 헬퍼
-function fpSetState(state) {
-  const btn    = document.getElementById('fpBtn');
-  const status = document.getElementById('fpStatus');
-  btn.classList.remove('scanning','success','error');
-  if (state === 'scanning') {
-    btn.classList.add('scanning');
-    status.textContent = TX.fpScanning[lang];
-    status.className = 'fp-status scanning';
-  } else if (state === 'success') {
-    btn.classList.add('success');
-    status.textContent = TX.fpSuccess[lang];
-    status.className = 'fp-status success';
-  } else if (state === 'error') {
-    btn.classList.add('error');
-    status.textContent = TX.fpFail[lang];
-    status.className = 'fp-status error';
-    setTimeout(() => fpReset(), 2200);
+// ── Crypto ──
+const _enc   = new TextEncoder();
+const _dec   = new TextDecoder();
+const b64u   = a => btoa(String.fromCharCode(...new Uint8Array(a))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');
+const fromB64u = s => Uint8Array.from(atob(s.replace(/-/g,'+').replace(/_/g,'/')), c => c.charCodeAt(0));
+const rand   = n => crypto.getRandomValues(new Uint8Array(n));
+
+async function deriveKey(credentialId, salt) {
+  const raw = await crypto.subtle.importKey('raw', credentialId, 'PBKDF2', false, ['deriveKey']);
+  return crypto.subtle.deriveKey(
+    { name:'PBKDF2', salt, iterations:200_000, hash:'SHA-256' },
+    raw, { name:'AES-GCM', length:256 }, false, ['encrypt','decrypt']
+  );
+}
+async function aesEncrypt(aesKey, plaintext) {
+  const iv = rand(12);
+  const ct = await crypto.subtle.encrypt({ name:'AES-GCM', iv }, aesKey, _enc.encode(plaintext));
+  return { iv: b64u(iv), ct: b64u(ct) };
+}
+async function aesDecrypt(aesKey, { iv, ct }) {
+  const pt = await crypto.subtle.decrypt({ name:'AES-GCM', iv: fromB64u(iv) }, aesKey, fromB64u(ct));
+  return _dec.decode(pt);
+}
+
+// ── WebAuthn ──
+async function webAuthnRegister() {
+  return navigator.credentials.create({
+    publicKey: {
+      challenge: rand(32),
+      rp: { id: RP_ID, name: RP_NAME },
+      user: { id: rand(16), name: 'owner', displayName: '사용자' },
+      pubKeyCredParams: [{ type:'public-key', alg:-7 }, { type:'public-key', alg:-257 }],
+      authenticatorSelection: { authenticatorAttachment:'platform', userVerification:'required', residentKey:'preferred' },
+      timeout: 60000, attestation: 'none'
+    }
+  });
+}
+async function webAuthnAuthenticate(credentialId) {
+  const allowCreds = credentialId
+    ? [{ type:'public-key', id: fromB64u(credentialId), transports:['internal'] }] : [];
+  return navigator.credentials.get({
+    publicKey: { challenge: rand(32), rpId: RP_ID, allowCredentials: allowCreds, userVerification:'required', timeout:60000 }
+  });
+}
+async function hasSavedCredential() {
+  const cred = await dbGet(CRED_KEY);
+  const enc  = await dbGet(VAULT_KEY);
+  return !!(cred && enc);
+}
+
+// ── Lock Screen 상태 메시지 ──
+function setStatus(msg, type='info') {
+  const el = document.getElementById('lockStatus');
+  if (el) { el.textContent = msg; el.className = `lock-status ${type}`; }
+}
+function toggleKeyVis() {
+  const inp = document.getElementById('apiKeyInput');
+  inp.type = inp.type === 'password' ? 'text' : 'password';
+}
+
+// ── 지문 버튼 클릭 ──
+async function onFPClick() {
+  const has = await hasSavedCredential();
+  if (has) {
+    await unlockWithBiometric();
   } else {
-    fpReset();
+    document.getElementById('keyPanel').classList.add('open');
+    setStatus('API 키를 입력하고 지문으로 저장하세요', 'info');
+    document.getElementById('apiKeyInput').focus();
   }
 }
 
-function fpReset() {
-  const btn    = document.getElementById('fpBtn');
-  const status = document.getElementById('fpStatus');
-  btn.classList.remove('scanning','success','error');
-  status.textContent = '';
-  status.className = 'fp-status';
-}
-
-// base64url 인코딩/디코딩 유틸
-function b64url(buf) {
-  return btoa(String.fromCharCode(...new Uint8Array(buf)))
-    .replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');
-}
-function urlb64(str) {
-  str = str.replace(/-/g,'+').replace(/_/g,'/');
-  while(str.length % 4) str += '=';
-  return Uint8Array.from(atob(str), c=>c.charCodeAt(0));
-}
-
-// WebAuthn 지원 여부 확인
-function webAuthnSupported() {
-  return window.PublicKeyCredential !== undefined
-    && typeof window.PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable === 'function';
-}
-
-// ── 1단계: 지문 등록 (최초 1회) ──
-async function registerFingerprint() {
-  const challenge = crypto.getRandomValues(new Uint8Array(32));
-  const userId = crypto.getRandomValues(new Uint8Array(16));
-
-  const publicKey = {
-    challenge,
-    rp: { name: '마케팅 AI 에이전트', id: location.hostname },
-    user: { id: userId, name: 'user@mkt-agent', displayName: '사용자' },
-    pubKeyCredParams: [
-      { type: 'public-key', alg: -7  },   // ES256
-      { type: 'public-key', alg: -257 }   // RS256
-    ],
-    authenticatorSelection: {
-      authenticatorAttachment: 'platform',  // 기기 내장 지문/Face ID만
-      userVerification: 'required',          // 반드시 생체인증 요구
-      residentKey: 'preferred'
-    },
-    timeout: 60000,
-    attestation: 'none'
-  };
-
-  const credential = await navigator.credentials.create({ publicKey });
-  // credentialId 저장
-  localStorage.setItem('mkt_cred_id', b64url(credential.rawId));
-  return credential;
-}
-
-// ── 2단계: 지문 인증 ──
-async function verifyFingerprint() {
-  const credIdStr = localStorage.getItem('mkt_cred_id');
-  const credId = urlb64(credIdStr);
-  const challenge = crypto.getRandomValues(new Uint8Array(32));
-
-  const publicKey = {
-    challenge,
-    rpId: location.hostname,
-    allowCredentials: [{
-      type: 'public-key',
-      id: credId,
-      transports: ['internal']  // 기기 내장 인증기만
-    }],
-    userVerification: 'required',  // 반드시 생체인증
-    timeout: 60000
-  };
-
-  const assertion = await navigator.credentials.get({ publicKey });
-  // credentialId가 등록된 것과 일치하는지 확인
-  const returnedId = b64url(assertion.rawId);
-  if(returnedId !== credIdStr) throw new Error('credential mismatch');
-  return assertion;
-}
-
-// ── 메인 인증 흐름 ──
-async function doAuth() {
-  if(authBusy) return;
-  if(!apiKey) { openApiModal(); return; }
-
-  // WebAuthn 미지원 기기(PC 브라우저 등) → 경고 후 fallback 없이 차단
-  if(!webAuthnSupported()) {
-    const status = document.getElementById('fpStatus');
-    status.textContent = lang==='ko'
-      ? '⚠️ 이 기기는 생체인증을 지원하지 않습니다'
-      : '⚠️ Biometric auth not supported on this device';
-    status.className = 'fp-status error';
-    return;
+// ── API 키 재설정 패널 ──
+function openResetPanel() {
+  const panel = document.getElementById('keyPanel');
+  panel.classList.toggle('open');
+  if (panel.classList.contains('open')) {
+    document.getElementById('apiKeyInput').value = '';
+    document.getElementById('apiKeyInput').focus();
+    setStatus('새 API 키를 입력하고 지문으로 저장하세요', 'info');
   }
+}
 
-  authBusy = true;
-  fpSetState('scanning');
-
+// ── API 키 등록 (지문 암호화 저장) ──
+async function registerKey() {
+  const inputKey = document.getElementById('apiKeyInput').value.trim();
+  if (!inputKey.startsWith('sk-')) {
+    setStatus('❌ sk- 로 시작하는 API 키를 입력하세요', 'err'); return;
+  }
+  if (!window.PublicKeyCredential) {
+    setStatus('❌ 이 브라우저는 WebAuthn을 지원하지 않습니다', 'err'); return;
+  }
+  const btnSave = document.getElementById('btnSave');
+  const btnFP   = document.getElementById('btnFP');
+  btnSave.disabled = true;
+  btnFP.disabled   = true;
+  setStatus('☝️ 지문을 인식해 주세요...', 'info');
   try {
-    if(!hasCredential()) {
-      // 최초: 지문 등록
-      const status = document.getElementById('fpStatus');
-      status.textContent = lang==='ko' ? '🔑 지문을 등록합니다...' : '🔑 Registering fingerprint...';
-      await registerFingerprint();
-    }
-    // 인증 실행 — OS가 지문/Face ID 팝업을 띄움
-    await verifyFingerprint();
-
-    // 성공
-    fpSetState('success');
-    setTimeout(() => {
-      unlockApp();
-      authBusy = false;
-      fpReset();
-    }, 700);
-
-  } catch(e) {
-    authBusy = false;
-    // 사용자가 취소하거나 인증 실패
-    if(e.name === 'NotAllowedError') {
-      fpSetState('error');  // 인증 거부 or 잘못된 지문
-    } else if(e.name === 'InvalidStateError') {
-      // 이미 등록된 credential — 그냥 verify 재시도
-      localStorage.removeItem('mkt_cred_id');
-      fpSetState('idle');
-      authBusy = false;
-    } else {
-      fpSetState('error');
-      console.warn('WebAuthn error:', e.name, e.message);
-    }
+    const cred      = await webAuthnRegister();
+    const credId    = b64u(cred.rawId);
+    const salt      = rand(32);
+    const aesKey    = await deriveKey(fromB64u(credId), salt);
+    const encrypted = await aesEncrypt(aesKey, inputKey);
+    await dbSet(CRED_KEY,  credId);
+    await dbSet(VAULT_KEY, { ...encrypted, salt: b64u(salt) });
+    _runtimeKey = inputKey;
+    apiKey      = inputKey;
+    document.getElementById('apiKeyInput').value = '';
+    document.getElementById('keyPanel').classList.remove('open');
+    setStatus('✅ 등록 완료!', 'ok');
+    setTimeout(enterApp, 600);
+  } catch (err) {
+    setStatus(err.name === 'NotAllowedError'
+      ? '❌ 지문 인증이 취소되었습니다' : '❌ 등록 실패: ' + err.message, 'err');
+    btnSave.disabled = false;
+    btnFP.disabled   = false;
   }
 }
 
-function unlockApp() {
-  document.getElementById('lockScreen').style.display = 'none';
-  const app = document.getElementById('mainApp');
-  app.style.display = 'flex';
+// ── 지문으로 잠금 해제 ──
+async function unlockWithBiometric() {
+  const btnFP = document.getElementById('btnFP');
+  btnFP.disabled = true;
+  setStatus('☝️ 지문을 인식해 주세요...', 'info');
+  try {
+    const credId   = await dbGet(CRED_KEY);
+    const vaultRaw = await dbGet(VAULT_KEY);
+    if (!credId || !vaultRaw) {
+      setStatus('❌ 저장된 키가 없습니다. 지문 버튼을 눌러 등록하세요', 'err');
+      btnFP.disabled = false; return;
+    }
+    await webAuthnAuthenticate(credId);
+    const salt      = fromB64u(vaultRaw.salt);
+    const aesKey    = await deriveKey(fromB64u(credId), salt);
+    _runtimeKey     = await aesDecrypt(aesKey, vaultRaw);
+    apiKey          = _runtimeKey;
+    setStatus('✅ 인증 성공!', 'ok');
+    setTimeout(enterApp, 500);
+  } catch (err) {
+    setStatus(err.name === 'NotAllowedError'
+      ? '❌ 지문 인증이 취소되었습니다'
+      : '❌ 인증 실패. API 키 재설정을 눌러 재등록하세요', 'err');
+    btnFP.disabled = false;
+  }
+}
+
+function enterApp() {
+  const ls = document.getElementById('lockScreen');
+  ls.classList.add('hidden');
+  document.getElementById('mainApp').style.display = 'flex';
+  setTimeout(() => { ls.style.display = 'none'; }, 420);
   applyLang();
   fetchServerStats();
 }
 
-function lockApp() {
-  document.getElementById('mainApp').style.display = 'none';
-  document.getElementById('lockScreen').style.display = 'flex';
-  authBusy = false;
-  fpReset();
-  if (!apiKey) {
-    const status = document.getElementById('fpStatus');
-    status.textContent = TX.fpNeedKey[lang];
-    status.className = 'fp-status error';
-  }
-}
+function unlockApp() { enterApp(); }
 
-// ═══ API MODAL ═══
-function openApiModal() {
-  // 기존 키가 있으면 마스킹 표시, 없으면 빈칸
-  document.getElementById('apiField').value = '';
-  document.getElementById('apiField').placeholder =
-    apiKey ? 'sk-ant-... (새 키를 입력하면 교체됩니다)' : 'sk-ant-api03-...';
-  document.getElementById('apiOverlay').classList.add('open');
-  setTimeout(() => document.getElementById('apiField').focus(), 350);
-}
-function closeApiModal() {
-  document.getElementById('apiOverlay').classList.remove('open');
-}
-function overlayClick(e) { if(e.target===e.currentTarget) closeApiModal(); }
-function saveKey() {
-  const v = document.getElementById('apiField').value.trim();
-  if (!v) {
-    showToast(lang==='ko'?'API 키를 입력하세요':'Enter API key');
-    return;
-  }
-  if (!v.startsWith('sk-')) {
-    showToast(lang==='ko'?'올바른 API 키 형식이 아닙니다 (sk- 로 시작해야 합니다)':'Invalid format — must start with sk-');
-    return;
-  }
-  apiKey = v;
-  localStorage.setItem('mkt_key', v);
-  localStorage.removeItem('mkt_cred_id'); // 기존 지문 등록 초기화
-  closeApiModal();
-  showToast(lang==='ko'?'✓ API 키 저장됨 — 지문을 등록해주세요':'✓ Saved — please register fingerprint');
-  setTimeout(() => doAuth(), 600);
+function lockApp() {
+  _runtimeKey = null; apiKey = '';
+  document.getElementById('keyPanel').classList.remove('open');
+  const ls = document.getElementById('lockScreen');
+  ls.style.display = 'flex'; ls.classList.remove('hidden');
+  const b = document.getElementById('btnFP'); if(b) b.disabled = false;
+  const s = document.getElementById('btnSave'); if(s) s.disabled = false;
+  setStatus('\u00a0', 'info');
 }
 
 // ═══ FETCH SERVER STATS (Railway backend reads the CSV) ═══
@@ -1260,19 +1267,17 @@ function showToast(msg) {
 }
 
 // ═══ INIT ═══
-window.onload = () => {
+window.onload = async () => {
   applyLang();
-  const st = document.getElementById('fpStatus');
-  if (!apiKey) {
-    // 최초 접속: API 키 없음 안내
-    st.textContent = TX.fpNeedKey[lang];
-    st.className = 'fp-status error';
-  } else if (!localStorage.getItem('mkt_cred_id')) {
-    // API 키 있지만 지문 미등록 안내
-    st.textContent = lang==='ko' ? '손가락을 터치하여 지문 등록' : 'Touch to register fingerprint';
-    st.className = 'fp-status scanning';
+  try {
+    const has = await hasSavedCredential();
+    setStatus(has
+      ? (lang==='ko' ? '☝️ 지문 버튼을 눌러 잠금을 해제하세요' : '☝️ Touch to unlock')
+      : (lang==='ko' ? '☝️ 지문 버튼을 눌러 API 키를 등록하세요' : '☝️ Touch to register API key'),
+      'info');
+  } catch(e) {
+    setStatus('☝️ 지문 버튼을 눌러 시작하세요', 'info');
   }
-  // else: 정상 재접속 → 상태 없음 (제목 텍스트로 충분)
 };
 </script>
 </body>
