@@ -1137,12 +1137,11 @@ async function saveChartPDF(chartId, title) {
   const captureImage = () => new Promise(resolve => {
     const chartInst = chartRegistry[chartId];
     const stillAnimating = chartInst && chartInst._animating;
-    // 애니메이션 중이면 완료될 때까지 최대 1.2초 대기
-    const delay = stillAnimating ? 900 : 0;
+    const delay = stillAnimating ? 900 : 50;
     setTimeout(() => {
-      // animation: false 옵션으로 즉시 완전 렌더링 후 캡처
       if (chartInst) chartInst.draw();
-      resolve(canvas.toDataURL('image/png', 1.0));
+      // JPEG로 캡처 (pdfkit이 JPEG Buffer를 안정적으로 지원)
+      resolve(canvas.toDataURL('image/jpeg', 0.92));
     }, delay);
   });
 
@@ -1150,7 +1149,7 @@ async function saveChartPDF(chartId, title) {
     const imgData = await captureImage();
 
     // base64 데이터 유효성 확인
-    const base64Part = imgData.replace(/^data:image\/png;base64,/, '');
+    const base64Part = imgData.replace(/^data:image\/(png|jpeg);base64,/, '');
     if (!base64Part || base64Part.length < 100) {
       throw new Error(lang==='ko'?'차트 이미지 캡처 실패. 잠시 후 다시 시도하세요.':'Chart capture failed. Try again in a moment.');
     }
