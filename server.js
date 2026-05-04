@@ -912,36 +912,43 @@ app.post('/api/send-report', async (req, res) => {
 </div>
 </body></html>`;
 
-  // Gmail SMTP 발송
+  // Gmail SMTP — SSL 465 직접 사용, verify() 제거로 왕복 1회 절약
   const transporter = nodemailer.createTransport({
-    service: 'gmail',
-    auth: { user: MAIL_USER, pass: MAIL_PASS }
+    host: 'smtp.gmail.com',
+    port: 465,
+    secure: true,
+    auth: { user: MAIL_USER, pass: MAIL_PASS },
+    connectionTimeout: 10000,
+    greetingTimeout:    8000,
+    socketTimeout:     15000,
   });
 
-  try {
-    await transporter.verify();
-  } catch(e) {
-    return res.status(500).json({ error: `메일 서버 연결 실패: ${e.message}` });
-  }
+  const subject = `[마케팅 AI 에이전트] E-Commerce 고객 분석 보고서 - ${now}`;
 
-  // 수신자에게 순차 발송
-  const results = [];
-  for (const to of recipients) {
-    try {
-      await transporter.sendMail({
+  // 병렬 발송 — Promise.allSettled로 일부 실패해도 나머지 계속 진행
+  const settled = await Promise.allSettled(
+    recipients.map(to =>
+      transporter.sendMail({
         from: `"${MAIL_FROM_NAME}" <${MAIL_USER}>`,
-        to,
-        subject: `[마케팅 AI 에이전트] E-Commerce 고객 분석 보고서 - ${now}`,
-        html: htmlBody
-      });
-      results.push({ to, status: 'sent' });
-    } catch(e) {
-      results.push({ to, status: 'failed', error: e.message });
-    }
-  }
+        to, subject, html: htmlBody,
+      })
+    )
+  );
+
+  const results = settled.map((r, i) => ({
+    to:     recipients[i],
+    status: r.status === 'fulfilled' ? 'sent' : 'failed',
+    error:  r.status === 'rejected'  ? r.reason?.message : undefined,
+  }));
 
   const sent   = results.filter(r => r.status === 'sent').length;
   const failed = results.filter(r => r.status === 'failed').length;
+
+  console.log(`[Mail] sent=${sent} failed=${failed} total=${recipients.length}`);
+  results.filter(r => r.status==='failed').forEach(r =>
+    console.error(`  FAIL ${r.to}: ${r.error}`)
+  );
+
   res.json({ success: true, sent, failed, total: recipients.length, results });
 });
 
