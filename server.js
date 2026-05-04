@@ -5,6 +5,7 @@ const fs = require('fs');
 const { parse } = require('csv-parse/sync');
 const Anthropic = require('@anthropic-ai/sdk');
 const PDFDocument = require('pdfkit');
+const nodemailer  = require('nodemailer');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -701,6 +702,216 @@ app.post('/api/pdf-all', (req, res) => {
     console.error('PDF-ALL error:', e.message);
     if (!res.headersSent) res.status(500).json({ error: e.message });
   }
+});
+
+
+// ─── 인터랙티브 대시보드: AI 분석 생성 ─────────────────────────────────────
+app.post('/api/dashboard', async (req, res) => {
+  const { apiKey, lang = 'ko' } = req.body;
+  if (!apiKey) return res.status(400).json({ error: 'API key required' });
+  if (!richStats.overview) return res.status(503).json({ error: 'Data not loaded' });
+
+  const isKo = lang === 'ko';
+  const s = richStats;
+
+  // 3개 섹션을 병렬로 Claude에게 요청
+  const client = new Anthropic({ apiKey });
+
+  const makePrompt = (section) => {
+    const base = `당신은 전문 마케팅 데이터 분석가입니다. 아래 실제 데이터를 기반으로 분석하세요.
+
+[데이터 요약]
+- 총 고객: ${s.overview.total.toLocaleString()}명
+- 이탈 고객: ${s.overview.churned.toLocaleString()}명 (${s.overview.churn_rate}%)
+- 유지 고객: ${s.overview.active.toLocaleString()}명
+- 평균 LTV: $${s.metrics.Lifetime_Value.overall}
+- 이탈고객 LTV: $${s.metrics.Lifetime_Value.churned} / 유지고객 LTV: $${s.metrics.Lifetime_Value.active}
+- 장바구니이탈률: 이탈고객 ${s.metrics.Cart_Abandonment_Rate.churned}% / 유지고객 ${s.metrics.Cart_Abandonment_Rate.active}%
+- 마지막구매경과일: 이탈 ${s.metrics.Days_Since_Last_Purchase.churned}일 / 유지 ${s.metrics.Days_Since_Last_Purchase.active}일
+- 이메일오픈율: 이탈 ${s.metrics.Email_Open_Rate.churned}% / 유지 ${s.metrics.Email_Open_Rate.active}%
+- 로그인빈도: 이탈 ${s.metrics.Login_Frequency.churned} / 유지 ${s.metrics.Login_Frequency.active}회
+- 할인사용률: 이탈 ${s.metrics.Discount_Usage_Rate.churned}% / 유지 ${s.metrics.Discount_Usage_Rate.active}%
+- 반품률: 이탈 ${s.metrics.Returns_Rate.churned}% / 유지 ${s.metrics.Returns_Rate.active}%
+- 국가별(상위5): ${Object.entries(s.countries).slice(0,5).map(([k,v])=>`${k} ${v.rate}%`).join(', ')}
+- 연령대별 이탈률: ${Object.entries(s.age_bands).map(([k,v])=>`${k}세 ${v.rate}%`).join(', ')}
+- LTV 분위: P25=$${s.ltv_segments.p25}, P50=$${s.ltv_segments.p50}, P75=$${s.ltv_segments.p75}, P90=$${s.ltv_segments.p90}`;
+
+    const sections = {
+      segmentation: `${base}
+
+[요청] 1. 고객 분석 및 세분화 분석을 수행하세요.
+- RFM 기반 고객 세그먼트 (VIP/일반/이탈위험/휴면) 정의 및 규모 추정
+- 연령대·국가·성별별 핵심 인사이트
+- 고객 생애주기별 특성
+- 세그먼트별 맞춤 전략 제언
+응답은 ${isKo?'한국어':'English'}로, 명확한 섹션 구분과 핵심 수치를 포함해 500토큰 이내로 작성하세요.`,
+
+      churn: `${base}
+
+[요청] 2. 고객 이탈 예측 모델링 분석을 수행하세요.
+- 이탈 예측 주요 변수 Top 5 및 영향도 (데이터 근거)
+- 이탈 위험 고객 프로파일 (특징 3가지)
+- 이탈 예측 모델 권장 알고리즘 (로지스틱회귀/랜덤포레스트/XGBoost 비교)
+- 조기 이탈 징후 지표 및 임계값 제안
+응답은 ${isKo?'한국어':'English'}로, 명확한 섹션 구분과 핵심 수치를 포함해 500토큰 이내로 작성하세요.`,
+
+      marketing: `${base}
+
+[요청] 3. 마케팅 최적화 방안을 제시하세요.
+- 이탈 방지 캠페인 전략 (채널·타이밍·메시지)
+- VIP 고객 유지 프로그램 설계
+- 이메일 캠페인 최적화 방안 (오픈율 개선)
+- 할인/프로모션 전략 (할인 의존도 낮추기)
+- 예상 ROI 및 우선순위 실행 로드맵
+응답은 ${isKo?'한국어':'English'}로, 명확한 섹션 구분과 핵심 수치를 포함해 500토큰 이내로 작성하세요.`
+    };
+    return sections[section];
+  };
+
+  try {
+    const [seg, churn, mkt] = await Promise.all([
+      client.messages.create({ model:'claude-sonnet-4-5', max_tokens:600, messages:[{role:'user',content:makePrompt('segmentation')}] }),
+      client.messages.create({ model:'claude-sonnet-4-5', max_tokens:600, messages:[{role:'user',content:makePrompt('churn')}] }),
+      client.messages.create({ model:'claude-sonnet-4-5', max_tokens:600, messages:[{role:'user',content:makePrompt('marketing')}] }),
+    ]);
+
+    res.json({
+      segmentation: seg.content[0].text,
+      churn:        churn.content[0].text,
+      marketing:    mkt.content[0].text,
+      generated_at: new Date().toISOString(),
+      data_rows:    s.overview.total
+    });
+  } catch(e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ─── 메일 발송 엔드포인트 ────────────────────────────────────────────────────
+app.post('/api/send-report', async (req, res) => {
+  const { segmentation, churn, marketing, lang = 'ko' } = req.body;
+  if (!segmentation || !churn || !marketing) {
+    return res.status(400).json({ error: '분석 결과가 없습니다. 먼저 대시보드를 실행하세요.' });
+  }
+
+  // 환경변수에서 메일 설정 로드
+  const MAIL_USER = process.env.MAIL_USER;
+  const MAIL_PASS = process.env.MAIL_PASS;
+  const MAIL_FROM_NAME = process.env.MAIL_FROM_NAME || '마케팅 AI 에이전트';
+
+  if (!MAIL_USER || !MAIL_PASS) {
+    return res.status(500).json({ error: 'Railway 환경변수 MAIL_USER, MAIL_PASS가 설정되지 않았습니다.' });
+  }
+
+  // mailing_list.txt 읽기
+  const listPath = path.join(__dirname, 'mailing_list.txt');
+  if (!fs.existsSync(listPath)) {
+    return res.status(500).json({ error: 'mailing_list.txt 파일이 없습니다.' });
+  }
+  const recipients = fs.readFileSync(listPath, 'utf8')
+    .split('\n')
+    .map(l => l.trim())
+    .filter(l => l.length > 0 && l.includes('@'));
+
+  if (recipients.length === 0) {
+    return res.status(400).json({ error: '유효한 수신자가 없습니다.' });
+  }
+
+  // 메일 HTML 생성
+  const now = new Date().toLocaleString('ko-KR');
+  const s = richStats;
+
+  const htmlBody = `<!DOCTYPE html>
+<html lang="ko"><head><meta charset="UTF-8">
+<style>
+  body{font-family:'Malgun Gothic',sans-serif;background:#f5f7fa;margin:0;padding:0}
+  .wrap{max-width:680px;margin:0 auto;background:white}
+  .header{background:linear-gradient(135deg,#4f8ef7,#7c5cbf);padding:32px 28px;color:white;text-align:center}
+  .header h1{font-size:22px;margin:0 0 8px}
+  .header p{font-size:13px;opacity:.85;margin:0}
+  .intro{background:#eef3ff;border-left:4px solid #4f8ef7;padding:18px 24px;margin:24px;border-radius:0 8px 8px 0;font-size:14px;line-height:1.7;color:#333}
+  .stats-row{display:flex;gap:12px;padding:0 24px 20px;flex-wrap:wrap}
+  .stat-box{flex:1;min-width:120px;background:#f8f9ff;border:1px solid #e0e8ff;border-radius:10px;padding:14px;text-align:center}
+  .stat-val{font-size:22px;font-weight:700;color:#4f8ef7}
+  .stat-lbl{font-size:11px;color:#888;margin-top:4px}
+  .section{margin:0 24px 24px;border:1px solid #e5e7eb;border-radius:12px;overflow:hidden}
+  .section-header{background:#4f8ef7;color:white;padding:14px 18px;font-size:15px;font-weight:700}
+  .section-header.churn{background:#ef4444}
+  .section-header.mkt{background:#7c5cbf}
+  .section-body{padding:18px;font-size:13px;line-height:1.8;color:#333;white-space:pre-wrap}
+  .footer{background:#f8f9ff;padding:20px 24px;text-align:center;font-size:11px;color:#aaa;border-top:1px solid #e5e7eb}
+</style></head><body>
+<div class="wrap">
+  <div class="header">
+    <h1>📊 마케팅 AI 에이전트 분석 보고서</h1>
+    <p>생성일시: ${now} · 분석 고객 수: ${s.overview.total.toLocaleString()}명</p>
+  </div>
+
+  <div class="intro">
+    AI 전략 마케팅 강의 보조자료로 마케팅 AI 에이전트를 실제로 구현하여 분석한
+    Business Intelligence의 output을 AI 에이전트가 보내드리는 메일입니다.
+  </div>
+
+  <div class="stats-row">
+    <div class="stat-box"><div class="stat-val">${s.overview.total.toLocaleString()}</div><div class="stat-lbl">총 고객 수</div></div>
+    <div class="stat-box"><div class="stat-val" style="color:#ef4444">${s.overview.churn_rate}%</div><div class="stat-lbl">이탈률</div></div>
+    <div class="stat-box"><div class="stat-val">$${s.metrics.Lifetime_Value.overall}</div><div class="stat-lbl">평균 LTV</div></div>
+    <div class="stat-box"><div class="stat-val">${s.metrics.Email_Open_Rate.active}%</div><div class="stat-lbl">이메일 오픈율(유지)</div></div>
+  </div>
+
+  <div class="section">
+    <div class="section-header">🎯 1. 고객 분석 및 세분화</div>
+    <div class="section-body">${segmentation.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>
+  </div>
+
+  <div class="section">
+    <div class="section-header churn">⚠️ 2. 고객 이탈 예측 모델링</div>
+    <div class="section-body">${churn.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>
+  </div>
+
+  <div class="section">
+    <div class="section-header mkt">💡 3. 마케팅 최적화 방안</div>
+    <div class="section-body">${marketing.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>
+  </div>
+
+  <div class="footer">
+    본 보고서는 마케팅 AI 에이전트가 자동 생성했습니다.<br>
+    분석 엔진: Claude claude-sonnet-4-5 · 데이터: E-Commerce 고객 ${s.overview.total.toLocaleString()}명 · Railway 백엔드
+  </div>
+</div>
+</body></html>`;
+
+  // Gmail SMTP 발송
+  const transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: { user: MAIL_USER, pass: MAIL_PASS }
+  });
+
+  try {
+    await transporter.verify();
+  } catch(e) {
+    return res.status(500).json({ error: `메일 서버 연결 실패: ${e.message}` });
+  }
+
+  // 수신자에게 순차 발송
+  const results = [];
+  for (const to of recipients) {
+    try {
+      await transporter.sendMail({
+        from: `"${MAIL_FROM_NAME}" <${MAIL_USER}>`,
+        to,
+        subject: `[마케팅 AI 에이전트] E-Commerce 고객 분석 보고서 - ${now}`,
+        html: htmlBody
+      });
+      results.push({ to, status: 'sent' });
+    } catch(e) {
+      results.push({ to, status: 'failed', error: e.message });
+    }
+  }
+
+  const sent   = results.filter(r => r.status === 'sent').length;
+  const failed = results.filter(r => r.status === 'failed').length;
+  res.json({ success: true, sent, failed, total: recipients.length, results });
 });
 
 // Serve frontend

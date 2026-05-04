@@ -275,6 +275,107 @@
     transition: background 0.14s; flex-shrink: 0;
   }
   .chart-pdf-btn:active { background: #eef2ff; }
+
+  /* ─── 인터랙티브 대시보드 ─── */
+  .dashboard-overlay {
+    position: fixed; inset: 0; z-index: 500;
+    background: rgba(0,0,0,0.55); backdrop-filter: blur(4px);
+    display: none; align-items: flex-start; justify-content: center;
+    overflow-y: auto; padding: 16px 0 40px;
+  }
+  .dashboard-overlay.open { display: flex; }
+  .dashboard-panel {
+    background: white; border-radius: 20px;
+    width: calc(100% - 24px); max-width: 520px;
+    margin: auto; overflow: hidden;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.25);
+  }
+  .db-header {
+    background: linear-gradient(135deg,#4f8ef7,#7c5cbf);
+    padding: 20px 20px 16px; color: white;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .db-header h2 { font-size: 17px; font-weight: 700; margin: 0; }
+  .db-header p  { font-size: 11px; opacity: .8; margin: 4px 0 0; }
+  .db-close {
+    background: rgba(255,255,255,0.2); border: none; color: white;
+    width: 32px; height: 32px; border-radius: 50%; font-size: 16px;
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .db-stats {
+    display: flex; gap: 8px; padding: 16px 16px 0; flex-wrap: wrap;
+  }
+  .db-stat {
+    flex: 1; min-width: 80px; background: #f8f9ff;
+    border: 1px solid #e0e8ff; border-radius: 10px;
+    padding: 10px 8px; text-align: center;
+  }
+  .db-stat-val { font-size: 18px; font-weight: 700; color: #4f8ef7; }
+  .db-stat-val.danger { color: #ef4444; }
+  .db-stat-lbl { font-size: 10px; color: #888; margin-top: 3px; }
+  .db-run-btn {
+    margin: 14px 16px 0; width: calc(100% - 32px);
+    padding: 14px; background: linear-gradient(135deg,#4f8ef7,#7c5cbf);
+    border: none; border-radius: 12px; color: white;
+    font-size: 15px; font-weight: 700; cursor: pointer; transition: opacity 0.2s;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+  }
+  .db-run-btn:active { opacity: 0.85; }
+  .db-run-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .db-sections { padding: 14px 16px; display: flex; flex-direction: column; gap: 12px; }
+  .db-section { border: 1px solid #e5e7eb; border-radius: 12px; overflow: hidden; }
+  .db-section-hd {
+    padding: 11px 14px; font-size: 13px; font-weight: 700;
+    display: flex; align-items: center; gap: 8px; cursor: pointer;
+    user-select: none; transition: background 0.15s;
+  }
+  .db-section-hd.seg  { background: #eef3ff; color: #4f8ef7; }
+  .db-section-hd.chrn { background: #fef2f2; color: #ef4444; }
+  .db-section-hd.mkt  { background: #f5f0ff; color: #7c5cbf; }
+  .db-section-hd:active { filter: brightness(0.95); }
+  .db-section-arrow { margin-left: auto; font-size: 11px; transition: transform 0.2s; }
+  .db-section.collapsed .db-section-arrow { transform: rotate(-90deg); }
+  .db-section-body {
+    padding: 14px; font-size: 13px; line-height: 1.75;
+    color: #333; white-space: pre-wrap; border-top: 1px solid #e5e7eb;
+    max-height: 320px; overflow-y: auto;
+  }
+  .db-section.collapsed .db-section-body { display: none; }
+  .db-loading {
+    padding: 40px 20px; text-align: center; color: #888; font-size: 14px;
+  }
+  .db-spinner {
+    width: 36px; height: 36px; border: 3px solid #e5e7eb;
+    border-top-color: #4f8ef7; border-radius: 50%;
+    animation: spin 0.8s linear infinite; margin: 0 auto 14px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .db-mail-btn {
+    margin: 0 16px 16px; width: calc(100% - 32px);
+    padding: 13px; background: white;
+    border: 2px solid #4f8ef7; border-radius: 12px;
+    color: #4f8ef7; font-size: 14px; font-weight: 700;
+    cursor: pointer; transition: all 0.2s;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+  }
+  .db-mail-btn:active { background: #eef3ff; }
+  .db-mail-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+  .db-mail-result {
+    margin: 0 16px 16px; padding: 12px 14px;
+    border-radius: 10px; font-size: 13px; text-align: center;
+  }
+  .db-mail-result.ok  { background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; }
+  .db-mail-result.err { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
+  /* 대시보드 버튼 (앱바에) */
+  .dashboard-btn {
+    padding: 6px 12px; background: linear-gradient(135deg,#4f8ef7,#7c5cbf);
+    border: none; border-radius: 10px; color: white;
+    font-size: 12px; font-weight: 600; cursor: pointer;
+    display: flex; align-items: center; gap: 4px; white-space: nowrap;
+    transition: opacity 0.2s; flex-shrink: 0;
+  }
+  .dashboard-btn:active { opacity: 0.85; }
 </style>
 </head>
 <body>
@@ -308,6 +409,69 @@
 
 <!-- API 키 입력: 잠금화면 key-panel로 통합 -->
 
+<!-- ═══ 인터랙티브 대시보드 ═══ -->
+<div class="dashboard-overlay" id="dashboardOverlay" onclick="closeDashboardOutside(event)">
+  <div class="dashboard-panel" id="dashboardPanel">
+
+    <div class="db-header">
+      <div>
+        <h2>📊 인터랙티브 대시보드</h2>
+        <p id="dbHeaderSub">E-Commerce 고객 분석 · AI 기반 인사이트</p>
+      </div>
+      <button class="db-close" onclick="closeDashboard()">✕</button>
+    </div>
+
+    <!-- 핵심 지표 요약 -->
+    <div class="db-stats" id="dbStats"></div>
+
+    <!-- AI 분석 실행 버튼 -->
+    <button class="db-run-btn" id="dbRunBtn" onclick="runDashboard()">
+      🤖 AI 분석 실행 (고객분석 · 이탈예측 · 마케팅최적화)
+    </button>
+
+    <!-- 분석 결과 섹션 -->
+    <div class="db-sections" id="dbSections" style="display:none">
+
+      <div class="db-section" id="dbSeg">
+        <div class="db-section-hd seg" onclick="toggleDbSection('dbSeg')">
+          🎯 1. 고객 분석 및 세분화
+          <span class="db-section-arrow">▼</span>
+        </div>
+        <div class="db-section-body" id="dbSegBody"></div>
+      </div>
+
+      <div class="db-section" id="dbChrn">
+        <div class="db-section-hd chrn" onclick="toggleDbSection('dbChrn')">
+          ⚠️ 2. 고객 이탈 예측 모델링
+          <span class="db-section-arrow">▼</span>
+        </div>
+        <div class="db-section-body" id="dbChrnBody"></div>
+      </div>
+
+      <div class="db-section" id="dbMkt">
+        <div class="db-section-hd mkt" onclick="toggleDbSection('dbMkt')">
+          💡 3. 마케팅 최적화 방안
+          <span class="db-section-arrow">▼</span>
+        </div>
+        <div class="db-section-body" id="dbMktBody"></div>
+      </div>
+    </div>
+
+    <!-- 로딩 표시 -->
+    <div class="db-loading" id="dbLoading" style="display:none">
+      <div class="db-spinner"></div>
+      <div id="dbLoadingMsg">AI가 3개 섹션을 동시 분석 중입니다...<br><small>약 20~40초 소요됩니다</small></div>
+    </div>
+
+    <!-- 메일 발송 버튼 -->
+    <button class="db-mail-btn" id="dbMailBtn" onclick="sendDashboardMail()" style="display:none">
+      📧 분석 결과 메일 발송 (12명)
+    </button>
+    <div class="db-mail-result" id="dbMailResult" style="display:none"></div>
+
+  </div>
+</div>
+
 <!-- ═══ MAIN APP ═══ -->
 <div id="mainApp">
   <div class="app-bar">
@@ -322,6 +486,7 @@
       <div class="app-title" id="appTitle">마케팅 AI 에이전트</div>
       <div class="app-sub"><span class="data-dot"></span><span id="appSub">데이터 로드 중...</span></div>
     </div>
+    <button class="dashboard-btn" onclick="openDashboard()">📊 대시보드</button>
     <button class="hbtn" onclick="toggleLang()" style="font-size:11px;width:auto;padding:0 10px;font-weight:600;">KO/EN</button>
     <button class="hbtn" onclick="exportAllPDF()" title="PDF">📄</button>
     <button class="hbtn" onclick="lockApp()" title="잠금">🔒</button>
@@ -1222,6 +1387,151 @@ function showToast(msg) {
   const t=document.getElementById('toast');
   t.textContent=msg; t.classList.add('show');
   setTimeout(()=>t.classList.remove('show'),2600);
+}
+
+
+// ═══════════════════════════════════════════════════════
+// 인터랙티브 대시보드
+// ═══════════════════════════════════════════════════════
+let dashboardData = null;  // 마지막 분석 결과 보관
+
+function openDashboard() {
+  const overlay = document.getElementById('dashboardOverlay');
+  overlay.classList.add('open');
+  document.body.style.overflow = 'hidden';
+  // 서버 통계로 핵심 지표 채우기
+  renderDbStats();
+}
+
+function closeDashboard() {
+  document.getElementById('dashboardOverlay').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+function closeDashboardOutside(e) {
+  if (e.target === document.getElementById('dashboardOverlay')) closeDashboard();
+}
+
+function renderDbStats() {
+  const el = document.getElementById('dbStats');
+  if (!el || !serverStats) return;
+  const s = serverStats;
+  const isKo = lang === 'ko';
+  el.innerHTML = `
+    <div class="db-stat">
+      <div class="db-stat-val">${s.overview.total.toLocaleString()}</div>
+      <div class="db-stat-lbl">${isKo?'총 고객':'Customers'}</div>
+    </div>
+    <div class="db-stat">
+      <div class="db-stat-val danger">${s.overview.churn_rate}%</div>
+      <div class="db-stat-lbl">${isKo?'이탈률':'Churn Rate'}</div>
+    </div>
+    <div class="db-stat">
+      <div class="db-stat-val">$${s.avg_metrics?.Lifetime_Value?.overall || '-'}</div>
+      <div class="db-stat-lbl">${isKo?'평균 LTV':'Avg LTV'}</div>
+    </div>
+    <div class="db-stat">
+      <div class="db-stat-val">${s.overview.active.toLocaleString()}</div>
+      <div class="db-stat-lbl">${isKo?'유지 고객':'Active'}</div>
+    </div>
+  `;
+}
+
+function toggleDbSection(id) {
+  const sec = document.getElementById(id);
+  sec.classList.toggle('collapsed');
+}
+
+async function runDashboard() {
+  const runBtn   = document.getElementById('dbRunBtn');
+  const loading  = document.getElementById('dbLoading');
+  const sections = document.getElementById('dbSections');
+  const mailBtn  = document.getElementById('dbMailBtn');
+  const mailRes  = document.getElementById('dbMailResult');
+
+  runBtn.disabled = true;
+  sections.style.display = 'none';
+  mailBtn.style.display  = 'none';
+  mailRes.style.display  = 'none';
+  loading.style.display  = 'block';
+
+  const isKo = lang === 'ko';
+  document.getElementById('dbLoadingMsg').innerHTML =
+    (isKo ? 'AI가 3개 섹션을 동시 분석 중입니다...' : 'AI analyzing 3 sections in parallel...')
+    + '<br><small>' + (isKo ? '약 20~40초 소요됩니다' : 'Takes ~20-40 seconds') + '</small>';
+
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/dashboard`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ apiKey, lang })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Analysis failed');
+
+    dashboardData = data;
+
+    // 결과 채우기
+    document.getElementById('dbSegBody').textContent  = data.segmentation;
+    document.getElementById('dbChrnBody').textContent = data.churn;
+    document.getElementById('dbMktBody').textContent  = data.marketing;
+
+    loading.style.display  = 'none';
+    sections.style.display = 'flex';
+    mailBtn.style.display  = 'block';
+    runBtn.disabled = false;
+    runBtn.textContent = isKo ? '🔄 재분석' : '🔄 Re-analyze';
+
+    showToast(isKo ? '✅ 분석 완료!' : '✅ Analysis complete!');
+
+  } catch(e) {
+    loading.style.display = 'none';
+    runBtn.disabled = false;
+    showToast((isKo ? '❌ 분석 오류: ' : '❌ Error: ') + e.message);
+  }
+}
+
+async function sendDashboardMail() {
+  if (!dashboardData) {
+    showToast(lang==='ko' ? '먼저 분석을 실행하세요' : 'Run analysis first');
+    return;
+  }
+  const mailBtn = document.getElementById('dbMailBtn');
+  const mailRes = document.getElementById('dbMailResult');
+  const isKo    = lang === 'ko';
+
+  mailBtn.disabled = true;
+  mailBtn.textContent = isKo ? '📧 발송 중...' : '📧 Sending...';
+  mailRes.style.display = 'none';
+
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/send-report`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        segmentation: dashboardData.segmentation,
+        churn:        dashboardData.churn,
+        marketing:    dashboardData.marketing,
+        lang
+      })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error);
+
+    mailRes.className = 'db-mail-result ok';
+    mailRes.innerHTML = isKo
+      ? `✅ 발송 완료: ${data.sent}명 성공${data.failed > 0 ? ` / ${data.failed}명 실패` : ''}`
+      : `✅ Sent: ${data.sent} ok${data.failed > 0 ? ` / ${data.failed} failed` : ''}`;
+    mailRes.style.display = 'block';
+    mailBtn.textContent = isKo ? '📧 메일 재발송' : '📧 Resend';
+
+  } catch(e) {
+    mailRes.className = 'db-mail-result err';
+    mailRes.textContent = (isKo ? '❌ 발송 실패: ' : '❌ Send failed: ') + e.message;
+    mailRes.style.display = 'block';
+    mailBtn.textContent = isKo ? '📧 분석 결과 메일 발송' : '📧 Send Report';
+  }
+  mailBtn.disabled = false;
 }
 
 // ═══ INIT ═══
