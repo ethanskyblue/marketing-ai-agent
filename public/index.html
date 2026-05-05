@@ -612,7 +612,7 @@
 
     <!-- 메일 발송 -->
     <button class="db-mail-btn" id="dbMailBtn" onclick="sendDashboardMail()" style="display:none">
-      📧 분석 결과 메일 발송 (12명)
+      📧 분석 결과 메일 발송
     </button>
     <div class="db-mail-result" id="dbMailResult" style="display:none"></div>
 
@@ -997,6 +997,17 @@ async function fetchServerStats() {
     const r = await fetch(`${BACKEND_URL}/api/stats`);
     if(!r.ok) throw new Error('Server error');
     serverStats = await r.json();
+
+    // 환경변수 로드 상태 콘솔 출력 (개발자 도구에서 확인)
+    if (serverStats.envCheck) {
+      const missing = Object.entries(serverStats.envCheck)
+        .filter(([,v]) => !v).map(([k]) => k);
+      if (missing.length > 0) {
+        console.warn('[ENV MISSING]', missing.join(', '));
+      } else {
+        console.log('[ENV] All Gmail variables loaded ✅');
+      }
+    }
     const total = serverStats.overview.total.toLocaleString();
     const cr = serverStats.overview.churn_rate;
     sub.textContent = lang==='ko'
@@ -1881,7 +1892,7 @@ async function sendDashboardMail() {
     mailRes.className   = 'db-mail-result err';
     mailRes.textContent = (isKo ? '❌ 발송 실패: ' : '❌ Failed: ') + msg;
     mailRes.style.display = 'block';
-    mailBtn.innerHTML     = '📧 ' + (isKo ? '분석 결과 메일 발송 (12명)' : 'Send Report (12)');
+    mailBtn.innerHTML     = '📧 ' + (isKo ? '분석 결과 메일 발송' : 'Send Report');
   }
   mailBtn.disabled = false;
 }

@@ -237,9 +237,20 @@ ${Object.entries(s.signup_quarters).map(([k,v])=>`  • ${k}: ${v}명`).join('\n
 // Health check & stats endpoint
 app.get('/api/stats', (req, res) => {
   if (!richStats.overview) return res.status(503).json({ error: 'Data not loaded' });
+  // 환경변수 로드 상태 확인 (디버그용)
+  const envCheck = {
+    GMAIL_USER:          !!process.env.GMAIL_USER,
+    GMAIL_CLIENT_ID:     !!process.env.GMAIL_CLIENT_ID,
+    GMAIL_CLIENT_SECRET: !!process.env.GMAIL_CLIENT_SECRET,
+    GMAIL_REFRESH_TOKEN: !!process.env.GMAIL_REFRESH_TOKEN,
+    MAIL_TO:             !!process.env.MAIL_TO,
+  };
+  console.log('[ENV CHECK]', JSON.stringify(envCheck));
+
   res.json({
     status: 'ok',
     loaded: true,
+    envCheck,   // 프론트에서도 확인 가능
     overview: richStats.overview,
     top_countries: Object.entries(richStats.countries)
       .slice(0,5)
