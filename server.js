@@ -840,25 +840,42 @@ app.post('/api/send-report', async (req, res) => {
     return res.status(500).json({ error: 'Railway 환경변수 MAIL_USER(발신자 이메일)가 설정되지 않았습니다.' });
   }
 
-  // mailing_list.txt 파싱 — "이름 <이메일>" 또는 "이메일" 형식 지원
-  const listPath = path.join(__dirname, 'mailing_list.txt');
-  if (!fs.existsSync(listPath)) {
-    return res.status(500).json({ error: 'mailing_list.txt 파일이 없습니다.' });
+  // 수신자 목록: 환경변수 MAIL_TO 우선, 없으면 mailing_list.txt 폴백
+  let rawList = '';
+  const MAIL_TO = process.env.MAIL_TO;
+
+  if (MAIL_TO && MAIL_TO.trim()) {
+    // 환경변수: 쉼표 구분으로 입력된 수신자 목록
+    rawList = MAIL_TO;
+  } else {
+    // 폴백: mailing_list.txt 파일
+    const listPath = path.join(__dirname, 'mailing_list.txt');
+    if (!fs.existsSync(listPath)) {
+      return res.status(500).json({
+        error: 'MAIL_TO 환경변수도 없고 mailing_list.txt 파일도 없습니다.'
+      });
+    }
+    // 파일의 줄바꿈을 쉼표로 변환
+    rawList = fs.readFileSync(listPath, 'utf8').split('\n').join(',');
   }
 
-  const recipients = fs.readFileSync(listPath, 'utf8')
-    .split('\n')
-    .map(l => l.trim().replace(/,$/, ''))
+  // "이름 <이메일>" 또는 "이메일" 형식 파싱
+  const recipients = rawList
+    .split(',')
+    .map(l => l.trim().replace(/\r/g, '').replace(/,$/, ''))
     .filter(l => l.length > 0 && l.includes('@'))
     .map(line => {
       const m = line.match(/^(.+?)\s*<([^>]+)>$/);
       return m ? { name: m[1].trim(), email: m[2].trim() }
-               : { name: line,        email: line };
+               : { name: line.trim(), email: line.trim() };
     });
 
   if (!recipients.length) {
-    return res.status(400).json({ error: '유효한 수신자가 없습니다.' });
+    return res.status(400).json({
+      error: '유효한 수신자가 없습니다. Railway Variables의 MAIL_TO를 확인하세요.'
+    });
   }
+
 
   // 메일 HTML 본문
   const now  = new Date().toLocaleString('ko-KR');
