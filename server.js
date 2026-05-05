@@ -5,7 +5,7 @@ const fs = require('fs');
 const { parse } = require('csv-parse/sync');
 const Anthropic = require('@anthropic-ai/sdk');
 const PDFDocument = require('pdfkit');
-const { Resend } = require('resend');
+const { google } = require('googleapis');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -818,52 +818,41 @@ app.post('/api/dashboard', async (req, res) => {
   }
 });
 
-// ─── 메일 발송 엔드포인트 (Resend HTTP API) ─────────────────────────────────
+// ─── 메일 발송 엔드포인트 (Gmail OAuth2 + googleapis) ─────────────────────────
 app.post('/api/send-report', async (req, res) => {
   const {
     segmentation, churn, marketing,
-    kmeans, models, features, age_bands, ltv_segments, overview,
+    kmeans, models, features, age_bands,
     segChartImg, ageChartImg
   } = req.body;
+
   if (!segmentation || !churn || !marketing) {
     return res.status(400).json({ error: '분석 결과가 없습니다. 먼저 대시보드를 실행하세요.' });
   }
 
-  const RESEND_KEY     = process.env.RESEND_API_KEY;
-  const MAIL_USER      = process.env.MAIL_USER;
-  const MAIL_FROM_NAME = process.env.MAIL_FROM_NAME || '마케팅 AI 에이전트';
+  // ── 환경변수 ──
+  const GMAIL_USER          = process.env.GMAIL_USER;
+  const GMAIL_CLIENT_ID     = process.env.GMAIL_CLIENT_ID;
+  const GMAIL_CLIENT_SECRET = process.env.GMAIL_CLIENT_SECRET;
+  const GMAIL_REFRESH_TOKEN = process.env.GMAIL_REFRESH_TOKEN;
+  const MAIL_TO             = process.env.MAIL_TO;
+  const MAIL_FROM_NAME      = process.env.MAIL_FROM_NAME || '마케팅 AI 에이전트';
 
-  if (!RESEND_KEY) {
-    return res.status(500).json({ error: 'Railway 환경변수 RESEND_API_KEY가 설정되지 않았습니다.' });
-  }
-  if (!MAIL_USER) {
-    return res.status(500).json({ error: 'Railway 환경변수 MAIL_USER(발신자 이메일)가 설정되지 않았습니다.' });
-  }
-
-  // 수신자 목록: 환경변수 MAIL_TO 우선, 없으면 mailing_list.txt 폴백
-  let rawList = '';
-  const MAIL_TO = process.env.MAIL_TO;
-
-  if (MAIL_TO && MAIL_TO.trim()) {
-    // 환경변수: 쉼표 구분으로 입력된 수신자 목록
-    rawList = MAIL_TO;
-  } else {
-    // 폴백: mailing_list.txt 파일
-    const listPath = path.join(__dirname, 'mailing_list.txt');
-    if (!fs.existsSync(listPath)) {
-      return res.status(500).json({
-        error: 'MAIL_TO 환경변수도 없고 mailing_list.txt 파일도 없습니다.'
-      });
-    }
-    // 파일의 줄바꿈을 쉼표로 변환
-    rawList = fs.readFileSync(listPath, 'utf8').split('\n').join(',');
+  // 필수 환경변수 확인
+  const missing = ['GMAIL_USER','GMAIL_CLIENT_ID','GMAIL_CLIENT_SECRET','GMAIL_REFRESH_TOKEN','MAIL_TO']
+    .filter(k => !process.env[k]);
+  if (missing.length) {
+    return res.status(500).json({
+      error: `Railway 환경변수 미설정: ${missing.join(', ')}`
+    });
   }
 
-  // "이름 <이메일>" 또는 "이메일" 형식 파싱
-  const recipients = rawList
+  // ── 수신자 파싱 (MAIL_TO 환경변수) ──
+  // "이름 <이메일>" 또는 "이메일" 쉼표 구분
+  const recipients = MAIL_TO
     .split(',')
-    .map(l => l.trim().replace(/\r/g, '').replace(/,$/, ''))
-    .filter(l => l.length > 0 && l.includes('@'))
+    .map(l => l.trim().replace(/\r?\n/g, ''))
+    .filter(l => l.includes('@'))
     .map(line => {
       const m = line.match(/^(.+?)\s*<([^>]+)>$/);
       return m ? { name: m[1].trim(), email: m[2].trim() }
@@ -872,18 +861,63 @@ app.post('/api/send-report', async (req, res) => {
 
   if (!recipients.length) {
     return res.status(400).json({
-      error: '유효한 수신자가 없습니다. Railway Variables의 MAIL_TO를 확인하세요.'
+      error: '유효한 수신자가 없습니다. MAIL_TO 환경변수를 확인하세요.'
     });
   }
 
+  // ── Gmail OAuth2 클라이언트 설정 ──
+  const OAuth2 = google.auth.OAuth2;
+  const oauth2Client = new OAuth2(
+    GMAIL_CLIENT_ID,
+    GMAIL_CLIENT_SECRET,
+    'https://developers.google.com/oauthplayground'
+  );
+  oauth2Client.setCredentials({ refresh_token: GMAIL_REFRESH_TOKEN });
 
-  // 메일 HTML 본문
+  let accessToken;
+  try {
+    const tokenRes = await oauth2Client.getAccessToken();
+    accessToken = tokenRes.token;
+    if (!accessToken) throw new Error('액세스 토큰 발급 실패');
+  } catch(e) {
+    return res.status(500).json({ error: `Gmail OAuth2 토큰 오류: ${e.message}` });
+  }
+
+  // ── Gmail API 메시지 발송 함수 ──
+  const gmail = google.gmail({ version: 'v1', auth: oauth2Client });
+
+  function makeRawMessage(to, subject, htmlBody, fromName, fromEmail) {
+    const boundary = `mimepart_${Date.now()}`;
+    const msg = [
+      `From: "${fromName}" <${fromEmail}>`,
+      `To: ${to}`,
+      `Subject: =?UTF-8?B?${Buffer.from(subject).toString('base64')}?=`,
+      'MIME-Version: 1.0',
+      `Content-Type: multipart/alternative; boundary="${boundary}"`,
+      '',
+      `--${boundary}`,
+      'Content-Type: text/html; charset=UTF-8',
+      'Content-Transfer-Encoding: base64',
+      '',
+      Buffer.from(htmlBody, 'utf8').toString('base64'),
+      '',
+      `--${boundary}--`
+    ].join('\r\n');
+    // base64url 인코딩
+    return Buffer.from(msg)
+      .toString('base64')
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_')
+      .replace(/=/g, '');
+  }
+
+  // ── 메일 HTML 본문 생성 ──
   const now  = new Date().toLocaleString('ko-KR');
   const s    = richStats;
   const safe = str => (str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 
-  // ── 세그먼트 카드 HTML 생성 ──
-  const segData = kmeans || {};
+  // 세그먼트 카드
+  const segData  = kmeans || {};
   const segCards = [
     { key:'seg1', icon:'⭐', label:'우수 고객',      color:'#22c55e', bg:'#f0fdf4' },
     { key:'seg0', icon:'👥', label:'일반 충성 고객',  color:'#4f8ef7', bg:'#eff6ff' },
@@ -892,26 +926,24 @@ app.post('/api/send-report', async (req, res) => {
   ].map(sg => {
     const d = segData[sg.key];
     if (!d) return '';
-    const churnBar = Math.min(Math.round(d.churn), 100);
-    const ltvBar   = Math.min(Math.round(d.ltv / 80), 100);
-    return `
-    <td style="width:25%;padding:6px;vertical-align:top">
+    const cw = Math.min(Math.round(d.churn), 100);
+    const lw = Math.min(Math.round(d.ltv / 80), 100);
+    return `<td style="width:25%;padding:6px;vertical-align:top">
       <div style="background:${sg.bg};border:1px solid ${sg.color}33;border-radius:10px;padding:10px 8px;text-align:center">
         <div style="font-size:18px">${sg.icon}</div>
         <div style="font-size:10px;font-weight:700;color:${sg.color};margin:3px 0">${sg.label}</div>
         <div style="font-size:11px;color:#555;margin-bottom:6px">${d.n.toLocaleString()}명</div>
         <div style="font-size:9px;color:#888;margin-bottom:2px">이탈률</div>
         <div style="background:#e5e7eb;border-radius:3px;height:6px;margin-bottom:4px">
-          <div style="width:${churnBar}%;background:${sg.color};height:6px;border-radius:3px"></div>
+          <div style="width:${cw}%;background:${sg.color};height:6px;border-radius:3px"></div>
         </div>
         <div style="font-size:11px;font-weight:700;color:${sg.color}">${d.churn}%</div>
         <div style="font-size:9px;color:#888;margin:4px 0 2px">LTV</div>
         <div style="font-size:11px;font-weight:700;color:#333">$${d.ltv.toLocaleString()}</div>
-      </div>
-    </td>`;
+      </div></td>`;
   }).join('');
 
-  // ── 모델 성능 테이블 HTML ──
+  // 모델 테이블
   const mdl = models || {};
   const modelRows = [
     { k:'logistic', name:'로지스틱 회귀',    best:false },
@@ -921,19 +953,21 @@ app.post('/api/send-report', async (req, res) => {
   ].map(m => {
     const d = mdl[m.k] || {};
     return `<tr style="background:${m.best?'#fefce8':'white'}">
-      <td style="padding:7px 10px;font-size:12px;font-weight:${m.best?700:400}">${d.name||m.name}${m.best?'&nbsp;<span style="background:#4f8ef7;color:white;font-size:9px;padding:1px 5px;border-radius:8px">최선</span>':''}</td>
+      <td style="padding:7px 10px;font-size:12px;font-weight:${m.best?700:400};text-align:left">
+        ${d.name||m.name}${m.best?'&nbsp;<span style="background:#4f8ef7;color:white;font-size:9px;padding:1px 5px;border-radius:8px">최선</span>':''}
+      </td>
       <td style="padding:7px 10px;font-size:12px;text-align:center;font-weight:${m.best?700:400}">${d.auc||'-'}</td>
       <td style="padding:7px 10px;font-size:12px;text-align:center">${d.acc?((d.acc*100).toFixed(1)+'%'):'-'}</td>
       <td style="padding:7px 10px;font-size:12px;text-align:center">${d.f1||'-'}</td>
     </tr>`;
   }).join('');
 
-  // ── 피처 중요도 바 HTML ──
+  // 피처 중요도 바
   const featColors = ['#ef4444','#f59e0b','#f97316','#4f8ef7','#22c55e','#7c5cbf','#06b6d4','#84cc16'];
   const featureRows = (features||[]).map((f,i) => {
     const w = Math.round(f.imp / 15 * 100);
     return `<tr>
-      <td style="padding:5px 10px;font-size:11px;color:#555;width:100px;text-align:right">${f.name}</td>
+      <td style="padding:5px 10px;font-size:11px;color:#555;width:110px;text-align:right">${f.name}</td>
       <td style="padding:5px 8px"><div style="background:#f3f4f6;border-radius:4px;height:10px">
         <div style="width:${w}%;background:${featColors[i]};height:10px;border-radius:4px"></div>
       </div></td>
@@ -941,9 +975,9 @@ app.post('/api/send-report', async (req, res) => {
     </tr>`;
   }).join('');
 
-  // ── 연령대 테이블 HTML ──
-  const ageBands = age_bands || {};
-  const ageRows = Object.entries(ageBands).map(([band, d]) => {
+  // 연령대 테이블
+  const ageBands  = age_bands || {};
+  const ageRows   = Object.entries(ageBands).map(([band,d]) => {
     const color = d.rate > 35 ? '#ef4444' : d.rate > 28 ? '#f59e0b' : '#22c55e';
     const w = Math.round(d.rate / 45 * 100);
     return `<tr>
@@ -956,13 +990,11 @@ app.post('/api/send-report', async (req, res) => {
     </tr>`;
   }).join('');
 
-  // ── 차트 이미지 섹션 ──
+  // 차트 이미지
   const segImgTag = segChartImg
-    ? `<img src="${segChartImg}" style="width:100%;max-width:520px;border-radius:8px;display:block;margin:0 auto" alt="세그먼트 분포 차트">`
-    : '';
+    ? `<div style="margin:12px 0"><img src="${segChartImg}" style="width:100%;max-width:520px;border-radius:8px;display:block;margin:0 auto" alt="세그먼트 분포 차트"></div>` : '';
   const ageImgTag = ageChartImg
-    ? `<img src="${ageChartImg}" style="width:100%;max-width:520px;border-radius:8px;display:block;margin:0 auto" alt="연령대별 이탈률 차트">`
-    : '';
+    ? `<div style="margin:10px 0"><img src="${ageChartImg}" style="width:100%;max-width:520px;border-radius:8px;display:block;margin:0 auto" alt="연령대별 이탈률 차트"></div>` : '';
 
   const htmlBody = `<!DOCTYPE html>
 <html lang="ko"><head><meta charset="UTF-8">
@@ -973,152 +1005,99 @@ app.post('/api/send-report', async (req, res) => {
   .hdr h1{font-size:20px;margin:0 0 6px;font-weight:700}
   .hdr p{font-size:12px;opacity:.8;margin:0}
   .intro{background:#eef3ff;border-left:5px solid #4f8ef7;padding:16px 20px;margin:20px 20px 0;border-radius:0 10px 10px 0;font-size:13px;line-height:1.75;color:#333}
-  .sec-wrap{margin:16px 20px}
-  .sec-hd{padding:11px 16px;font-size:13px;font-weight:700;color:#fff;border-radius:10px 10px 0 0;margin:0}
-  .seg-bg{background:#4f8ef7}.chrn-bg{background:#ef4444}.mkt-bg{background:#7c5cbf}.data-bg{background:#7c5cbf}
-  .sec-body{padding:14px 16px;font-size:12px;line-height:1.8;color:#333;white-space:pre-wrap;border:1px solid #e5e7eb;border-top:none;border-radius:0 0 10px 10px}
-  .tbl{width:100%;border-collapse:collapse;font-size:12px}
-  .tbl th{background:#f8f9ff;padding:8px 10px;text-align:center;font-weight:700;color:#555;border-bottom:1px solid #e5e7eb}
-  .tbl td{border-bottom:1px solid #f3f4f6}
-  .footer{background:#f8f9ff;padding:16px 20px;text-align:center;font-size:11px;color:#aaa;border-top:1px solid #e5e7eb}
-  .stats{display:flex;gap:0;border-bottom:1px solid #e5e7eb}
+  .stats{display:flex;border-bottom:1px solid #e5e7eb;margin:16px 0 0}
   .sbox{flex:1;padding:14px 8px;text-align:center;border-right:1px solid #e5e7eb}
   .sbox:last-child{border-right:none}
   .sval{font-size:18px;font-weight:700;color:#4f8ef7}
   .slbl{font-size:10px;color:#888;margin-top:3px}
+  .sw{margin:16px 20px}
+  .sh{padding:11px 16px;font-size:13px;font-weight:700;color:#fff;border-radius:10px 10px 0 0}
+  .sb{border:1px solid #e5e7eb;border-top:none;border-radius:0 0 10px 10px;padding:14px}
+  .tbl{width:100%;border-collapse:collapse;font-size:12px}
+  .tbl th{background:#f8f9ff;padding:8px 10px;text-align:center;font-weight:700;color:#555;border-bottom:1px solid #e5e7eb}
+  .tbl td{border-bottom:1px solid #f3f4f6}
+  .footer{background:#f8f9ff;padding:16px 20px;text-align:center;font-size:11px;color:#aaa;border-top:1px solid #e5e7eb;margin-top:4px}
+  .ai{background:#f8f9ff;border-radius:8px;padding:12px;margin-top:10px;font-size:12px;line-height:1.8;color:#333;white-space:pre-wrap}
 </style></head><body>
 <div class="wrap">
-
-  <!-- 헤더 -->
   <div class="hdr">
     <h1>📊 마케팅 AI 에이전트 분석 보고서</h1>
     <p>생성일시: ${now} &nbsp;·&nbsp; 분석 고객: ${s.overview.total.toLocaleString()}명</p>
   </div>
-
-  <!-- 서두 -->
   <div class="intro">
     AI 전략 마케팅 강의 보조자료로 마케팅 AI 에이전트를 실제로 구현하여 분석한<br>
     <strong>Business Intelligence</strong>의 output을 AI 에이전트가 보내드리는 메일입니다.
   </div>
-
-  <!-- 핵심 지표 -->
   <div class="stats">
     <div class="sbox"><div class="sval">${s.overview.total.toLocaleString()}</div><div class="slbl">총 고객 수</div></div>
     <div class="sbox"><div class="sval" style="color:#ef4444">${s.overview.churn_rate}%</div><div class="slbl">이탈률</div></div>
     <div class="sbox"><div class="sval">$${s.metrics.Lifetime_Value.overall}</div><div class="slbl">평균 LTV</div></div>
     <div class="sbox"><div class="sval">${s.metrics.Email_Open_Rate.active}%</div><div class="slbl">이메일 오픈율</div></div>
   </div>
-
-  <!-- ① 고객 분석 및 세분화 -->
-  <div class="sec-wrap">
-    <div class="sec-hd seg-bg">🎯 1. 고객 분석 및 세분화</div>
-    <div style="border:1px solid #e5e7eb;border-top:none;border-radius:0 0 10px 10px;padding:14px">
-
-      <!-- 세그먼트 카드 -->
+  <div class="sw">
+    <div class="sh" style="background:#4f8ef7">🎯 1. 고객 분석 및 세분화</div>
+    <div class="sb">
       <p style="font-size:12px;font-weight:700;color:#555;margin:0 0 8px">K-Means 4개 클러스터</p>
       <table style="width:100%;border-collapse:collapse"><tr>${segCards}</tr></table>
-
-      <!-- 세그먼트 도넛 차트 이미지 -->
-      ${segImgTag ? '<div style="margin:12px 0">' + segImgTag + '</div>' : ''}
-
-      <!-- AI 분석 텍스트 -->
-      <div style="background:#f8f9ff;border-radius:8px;padding:12px;margin-top:10px;font-size:12px;line-height:1.8;color:#333;white-space:pre-wrap">${safe(segmentation)}</div>
+      ${segImgTag}
+      <div class="ai">${safe(segmentation)}</div>
     </div>
   </div>
-
-  <!-- ② 이탈 예측 모델링 -->
-  <div class="sec-wrap">
-    <div class="sec-hd chrn-bg">⚠️ 2. 고객 이탈 예측 모델링</div>
-    <div style="border:1px solid #e5e7eb;border-top:none;border-radius:0 0 10px 10px;padding:14px">
-
-      <!-- 모델 성능 테이블 -->
+  <div class="sw">
+    <div class="sh" style="background:#ef4444">⚠️ 2. 고객 이탈 예측 모델링</div>
+    <div class="sb">
       <p style="font-size:12px;font-weight:700;color:#555;margin:0 0 8px">모델 성능 비교</p>
       <table class="tbl" style="margin-bottom:14px">
-        <thead><tr>
-          <th style="text-align:left">모델</th><th>AUC</th><th>정확도</th><th>F1</th>
-        </tr></thead>
+        <thead><tr><th style="text-align:left">모델</th><th>AUC</th><th>정확도</th><th>F1</th></tr></thead>
         <tbody>${modelRows}</tbody>
       </table>
-
-      <!-- 피처 중요도 바 -->
       <p style="font-size:12px;font-weight:700;color:#555;margin:0 0 8px">피처 중요도 Top 8</p>
-      <table style="width:100%;border-collapse:collapse;margin-bottom:10px">
-        <tbody>${featureRows}</tbody>
-      </table>
-
-      <!-- AI 분석 텍스트 -->
-      <div style="background:#fff5f5;border-radius:8px;padding:12px;font-size:12px;line-height:1.8;color:#333;white-space:pre-wrap">${safe(churn)}</div>
+      <table style="width:100%;border-collapse:collapse;margin-bottom:10px"><tbody>${featureRows}</tbody></table>
+      <div class="ai" style="background:#fff5f5">${safe(churn)}</div>
     </div>
   </div>
-
-  <!-- ③ 마케팅 최적화 -->
-  <div class="sec-wrap">
-    <div class="sec-hd mkt-bg">💡 3. 마케팅 최적화 방안</div>
-    <div style="border:1px solid #e5e7eb;border-top:none;border-radius:0 0 10px 10px;padding:14px">
-
-      <!-- 연령대별 이탈률 테이블 + 차트 -->
+  <div class="sw">
+    <div class="sh" style="background:#7c5cbf">💡 3. 마케팅 최적화 방안</div>
+    <div class="sb">
       <p style="font-size:12px;font-weight:700;color:#555;margin:0 0 8px">연령대별 이탈률</p>
       <table class="tbl" style="margin-bottom:10px">
-        <thead><tr>
-          <th style="text-align:left">연령대</th><th style="text-align:right">고객 수</th>
-          <th>이탈률 바</th><th>이탈률</th>
-        </tr></thead>
+        <thead><tr><th style="text-align:left">연령대</th><th style="text-align:right">고객 수</th><th>이탈률 바</th><th>이탈률</th></tr></thead>
         <tbody>${ageRows}</tbody>
       </table>
-      ${ageImgTag ? '<div style="margin:10px 0">' + ageImgTag + '</div>' : ''}
-
-      <!-- AI 분석 텍스트 -->
-      <div style="background:#f5f0ff;border-radius:8px;padding:12px;font-size:12px;line-height:1.8;color:#333;white-space:pre-wrap">${safe(marketing)}</div>
+      ${ageImgTag}
+      <div class="ai" style="background:#f5f0ff">${safe(marketing)}</div>
     </div>
   </div>
-
-  <div class="footer">
-    마케팅 AI 에이전트 자동 생성 | Claude claude-sonnet-4-5 | Railway 백엔드
-  </div>
+  <div class="footer">마케팅 AI 에이전트 자동 생성 | Claude claude-sonnet-4-5 | Railway 백엔드</div>
 </div></body></html>`;
 
-  // Resend HTTP API — SMTP 포트 불필요, 순수 HTTPS  // Resend HTTP API — SMTP 포트 불필요, 순수 HTTPS
-  const resend  = new Resend(RESEND_KEY);
+  // ── Gmail API로 발송 ──
   const subject = `[마케팅 AI 에이전트] E-Commerce 고객 분석 보고서 — ${now}`;
 
   const settled = await Promise.allSettled(
-    recipients.map(r =>
-      resend.emails.send({
-        from:    `${MAIL_FROM_NAME} <${MAIL_USER}>`,
-        to:      [r.email],
-        subject,
-        html:    htmlBody
-      })
-    )
+    recipients.map(r => {
+      const toStr = r.name ? `"${r.name}" <${r.email}>` : r.email;
+      const raw   = makeRawMessage(toStr, subject, htmlBody, MAIL_FROM_NAME, GMAIL_USER);
+      return gmail.users.messages.send({
+        userId: 'me',
+        requestBody: { raw }
+      });
+    })
   );
 
-  const results = settled.map((r, i) => {
-    if (r.status === 'fulfilled') {
-      // Resend는 error 필드로 오류 반환하기도 함
-      const data = r.value?.data;
-      const err  = r.value?.error;
-      return {
-        to:     `${recipients[i].name} <${recipients[i].email}>`,
-        status: err ? 'failed' : 'sent',
-        id:     data?.id,
-        error:  err ? (err.message || JSON.stringify(err)) : undefined
-      };
-    } else {
-      return {
-        to:     `${recipients[i].name} <${recipients[i].email}>`,
-        status: 'failed',
-        error:  r.reason?.message || String(r.reason)
-      };
-    }
-  });
+  const results = settled.map((r, i) => ({
+    to:     `${recipients[i].name} <${recipients[i].email}>`,
+    status: r.status === 'fulfilled' ? 'sent' : 'failed',
+    error:  r.status === 'rejected'  ? r.reason?.message : undefined
+  }));
 
   const sent       = results.filter(r => r.status === 'sent').length;
   const failed     = results.filter(r => r.status === 'failed').length;
   const firstError = results.find(r => r.status === 'failed')?.error || null;
 
-  console.log(`[Resend] sent=${sent} failed=${failed} total=${recipients.length}`);
-  results.filter(r => r.status === 'failed').forEach(r =>
-    console.error(`[Resend FAIL] ${r.to}: ${r.error}`)
+  console.log(`[Gmail] sent=${sent} failed=${failed} total=${recipients.length}`);
+  results.filter(r => r.status==='failed').forEach(r =>
+    console.error(`[Gmail FAIL] ${r.to}: ${r.error}`)
   );
 
   res.json({ success: sent > 0, sent, failed, total: recipients.length, firstError, results });
