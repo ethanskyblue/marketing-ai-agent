@@ -11,6 +11,9 @@ const PDFDocument = require('pdfkit');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// ─── Trust Proxy 설정 (Cloudtype/프록시 환경 필수) ───────────────────────────
+app.set('trust proxy', 1);
+
 // ─── CORS 설정 ───────────────────────────────────────────────────────────────
 const allowedOrigins = process.env.ALLOWED_ORIGINS
   ? process.env.ALLOWED_ORIGINS.split(',').map(o => o.trim())
@@ -264,7 +267,16 @@ ${dataContext}
   } catch (err) {
     console.error('Chat error:', err.message);
     if (err.message.includes('ANTHROPIC_API_KEY')) {
-      return res.status(500).json({ error: 'API 키가 설정되지 않았습니다.' });
+      return res.status(500).json({ error: 'API 키가 설정되지 않았습니다. Cloudtype 환경변수를 확인해주세요.' });
+    }
+    if (err.message.includes('Connection error') || err.message.includes('fetch failed') || err.code === 'ECONNREFUSED') {
+      return res.status(503).json({ error: 'AI 서버 연결에 실패했습니다. 잠시 후 다시 시도해주세요.' });
+    }
+    if (err.status === 401) {
+      return res.status(500).json({ error: 'API 키가 올바르지 않습니다. Cloudtype 환경변수를 확인해주세요.' });
+    }
+    if (err.status === 429) {
+      return res.status(429).json({ error: 'API 요청 한도를 초과했습니다. 잠시 후 다시 시도해주세요.' });
     }
     res.status(500).json({ error: '서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.' });
   }
