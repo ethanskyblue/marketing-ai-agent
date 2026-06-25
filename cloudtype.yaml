@@ -1,0 +1,20 @@
+name: marketing-ai-agent
+runtime: nodejs
+version: "18"
+
+build:
+  command: "cd backend && npm install"
+
+start:
+  command: "node backend/server.js"
+
+env:
+  PORT: "3000"
+  # ANTHROPIC_API_KEY: Cloudtype 대시보드에서 환경변수로 설정
+  # ALLOWED_ORIGINS: Cloudtype 대시보드에서 설정
+
+port: 3000
+
+healthcheck:
+  path: /health
+  interval: 30

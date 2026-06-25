@@ -1,0 +1,13 @@
+{
+  "name": "marketing-ai-agent",
+  "version": "1.0.0",
+  "description": "Marketing AI Agent - Customer Analysis & Churn Prediction",
+  "main": "backend/server.js",
+  "scripts": {
+    "start": "node backend/server.js",
+    "install-deps": "cd backend && npm install"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
