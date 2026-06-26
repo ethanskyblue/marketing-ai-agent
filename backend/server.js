@@ -187,7 +187,8 @@ app.post('/api/chat', apiLimiter, async (req, res) => {
       return res.status(400).json({ error: '잘못된 대화 기록 형식입니다.' });
     }
 
-    const apiKey = (process.env.ANTHROPIC_API_KEY || '').trim().replace(/[\r\n\t]/g, '');
+    const rawKey = process.env.ANTHROPIC_API_KEY || '';
+    const apiKey = rawKey.split('').filter(c => c.charCodeAt(0) > 31 && c.charCodeAt(0) < 127).join('').trim();
     if (!apiKey) {
       return res.status(500).json({ error: 'API 키가 설정되지 않았습니다. Cloudtype 환경변수를 확인해주세요.' });
     }
