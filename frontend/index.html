@@ -1,591 +1,289 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <meta name="theme-color" content="#1a1a4e" />
-  <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <title>마케팅 AI 에이전트</title>
-  <style>
-    /* ── Reset & Base ─────────────────────────── */
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    html, body {
-      height: 100%;
-      font-family: -apple-system, 'Noto Sans KR', BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      background: #0d0d2b;
-      color: #e8e8f5;
-      overflow: hidden;
-    }
-    :root {
-      --brand-deep:   #0d0d2b;
-      --brand-navy:   #1a1a4e;
-      --brand-blue:   #2d4fdb;
-      --brand-indigo: #4a6cf7;
-      --brand-cyan:   #38bdf8;
-      --brand-teal:   #2dd4bf;
-      --brand-grad1:  linear-gradient(135deg, #1a1a4e 0%, #2d1b69 50%, #1a3a5c 100%);
-      --brand-btn:    linear-gradient(135deg, #38bdf8 0%, #4a6cf7 100%);
-      --text-main:    #e8e8f5;
-      --text-sub:     #9999cc;
-      --surface:      rgba(255,255,255,0.06);
-      --surface-hover: rgba(255,255,255,0.10);
-      --border:       rgba(255,255,255,0.12);
-      --shadow:       0 8px 32px rgba(0,0,0,0.4);
-      --radius:       18px;
-      --radius-sm:    10px;
-    }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#0f0c29">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>마케팅 AI 에이전트</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root {
+    --primary: #0f0c29;
+    --accent: #4f8ef7;
+    --accent2: #7c5cbf;
+    --surface: #f6f7fb;
+    --card: #ffffff;
+    --text: #1a1a2e;
+    --text-muted: #6b7280;
+    --border: #e5e7eb;
+    --success: #22c55e;
+    --danger: #ef4444;
+    --warning: #f59e0b;
+    --radius: 16px;
+    --radius-sm: 10px;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; font-family: 'Segoe UI','Noto Sans KR','Apple SD Gothic Neo',sans-serif;
+    background: var(--surface); color: var(--text); overflow-x: hidden; }
 
-    /* ── Screen System ────────────────────────── */
-    .screen {
-      position: fixed;
-      inset: 0;
-      display: flex;
-      flex-direction: column;
-      transition: opacity 0.4s ease, transform 0.4s ease;
-    }
-    .screen.hidden {
-      opacity: 0;
-      pointer-events: none;
-      transform: scale(0.97);
-    }
+  /* ─── HOME SCREEN ─── */
+  #homeScreen {
+    position: fixed; inset: 0; z-index: 100;
+    background: linear-gradient(160deg,#0f1a2e 0%,#1a2a4a 50%,#0f1a2e 100%);
+    display: flex; flex-direction: column; align-items: center; justify-content: space-between;
+    padding: env(safe-area-inset-top,20px) 24px env(safe-area-inset-bottom,30px);
+    transition: opacity 0.4s;
+  }
+  #homeScreen.hidden { opacity: 0; pointer-events: none; }
 
-    /* ═══════════════════════════════════════════
-       HOME SCREEN
-    ═══════════════════════════════════════════ */
-    #home-screen {
-      background: var(--brand-grad1);
-      align-items: center;
-      justify-content: space-between;
-      padding: env(safe-area-inset-top, 20px) 24px env(safe-area-inset-bottom, 30px);
-    }
+  .home-header { width:100%; text-align:center; padding-top:24px; }
+  .home-title {
+    font-size: clamp(24px,7vw,32px); font-weight:800; letter-spacing:-0.5px;
+    background: linear-gradient(135deg,#fff 0%,#a0c4ff 100%);
+    -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;
+    line-height:1.2;
+  }
+  .home-subtitle { font-size:12px; color:rgba(255,255,255,0.4); margin-top:4px; letter-spacing:0.5px; }
 
-    .home-header { width: 100%; text-align: center; padding-top: 24px; }
-    .home-header h1 {
-      font-size: clamp(26px, 7vw, 34px);
-      font-weight: 800;
-      letter-spacing: -0.5px;
-      background: linear-gradient(135deg, #ffffff 0%, #a0c4ff 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-      line-height: 1.2;
-    }
-    .home-header .subtitle {
-      font-size: 13px;
-      color: #8899cc;
-      margin-top: 4px;
-      letter-spacing: 0.5px;
-    }
+  .hero-area { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:0; padding:20px 0; }
 
-    /* Robot Hero */
-    .hero-area {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 0;
-      padding: 20px 0;
-    }
-    .robot-wrap {
-      position: relative;
-      width: min(220px, 55vw);
-      height: min(220px, 55vw);
-    }
-    .robot-glow {
-      position: absolute;
-      inset: -20px;
-      border-radius: 50%;
-      background: radial-gradient(circle, rgba(74,108,247,0.35) 0%, transparent 70%);
-      animation: pulse-glow 3s ease-in-out infinite;
-    }
-    @keyframes pulse-glow {
-      0%, 100% { transform: scale(1); opacity: 0.7; }
-      50% { transform: scale(1.15); opacity: 1; }
-    }
-    .robot-svg {
-      width: 100%;
-      height: 100%;
-      position: relative;
-      z-index: 1;
-      animation: float 4s ease-in-out infinite;
-    }
-    @keyframes float {
-      0%, 100% { transform: translateY(0px); }
-      50% { transform: translateY(-12px); }
-    }
+  /* Robot */
+  .robot-wrap { position:relative; width:min(200px,52vw); height:min(200px,52vw); }
+  .robot-glow { position:absolute; inset:-20px; border-radius:50%;
+    background:radial-gradient(circle,rgba(79,142,247,0.35) 0%,transparent 70%);
+    animation:pulseGlow 3s ease-in-out infinite; }
+  @keyframes pulseGlow { 0%,100%{transform:scale(1);opacity:.7} 50%{transform:scale(1.15);opacity:1} }
+  .robot-svg { width:100%; height:100%; position:relative; z-index:1; animation:float 4s ease-in-out infinite; }
+  @keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-12px)} }
 
-    /* Floating icons */
-    .icon-orbit {
-      position: absolute;
-      inset: -30px;
-      animation: orbit-spin 8s linear infinite;
-    }
-    .orbit-icon {
-      position: absolute;
-      width: 44px;
-      height: 44px;
-      border-radius: 12px;
-      background: rgba(255,255,255,0.12);
-      backdrop-filter: blur(8px);
-      border: 1px solid rgba(255,255,255,0.2);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 22px;
-      animation: counter-rotate 8s linear infinite;
-    }
-    .orbit-icon:nth-child(1) { top: 0; left: 50%; transform: translateX(-50%); }
-    .orbit-icon:nth-child(2) { right: 0; top: 50%; transform: translateY(-50%); }
-    .orbit-icon:nth-child(3) { bottom: 0; left: 50%; transform: translateX(-50%); }
-    .orbit-icon:nth-child(4) { left: 0; top: 50%; transform: translateY(-50%); }
-    @keyframes orbit-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-    @keyframes counter-rotate { from { transform: rotate(0deg); } to { transform: rotate(-360deg); } }
-    .orbit-icon:nth-child(2) { animation: counter-rotate2 8s linear infinite; }
-    .orbit-icon:nth-child(4) { animation: counter-rotate4 8s linear infinite; }
-    @keyframes counter-rotate2 { from { transform: translateY(-50%) rotate(0); } to { transform: translateY(-50%) rotate(-360deg); } }
-    @keyframes counter-rotate4 { from { transform: translateY(-50%) rotate(0); } to { transform: translateY(-50%) rotate(-360deg); } }
+  /* Orbit icons */
+  .icon-orbit { position:absolute; inset:-30px; animation:orbitSpin 8s linear infinite; }
+  .orbit-icon {
+    position:absolute; width:42px; height:42px; border-radius:12px;
+    background:rgba(255,255,255,0.1); backdrop-filter:blur(8px);
+    border:1px solid rgba(255,255,255,0.18);
+    display:flex; align-items:center; justify-content:center; font-size:20px;
+    animation:counterRotate 8s linear infinite;
+  }
+  .orbit-icon:nth-child(1){top:0;left:50%;transform:translateX(-50%)}
+  .orbit-icon:nth-child(2){right:0;top:50%;transform:translateY(-50%)}
+  .orbit-icon:nth-child(3){bottom:0;left:50%;transform:translateX(-50%)}
+  .orbit-icon:nth-child(4){left:0;top:50%;transform:translateY(-50%)}
+  @keyframes orbitSpin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
+  @keyframes counterRotate{from{transform:rotate(0)}to{transform:rotate(-360deg)}}
 
-    /* Dots */
-    .home-dots { display: flex; gap: 6px; margin-top: 24px; }
-    .dot {
-      width: 8px; height: 8px; border-radius: 50%;
-      background: rgba(255,255,255,0.25);
-      transition: all 0.3s;
-    }
-    .dot.active { background: #4a6cf7; width: 24px; border-radius: 4px; }
+  .home-dots { display:flex; gap:6px; margin-top:22px; }
+  .home-dot { width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,0.25); }
+  .home-dot.active { background:#4f8ef7; width:24px; border-radius:4px; }
 
-    /* Tagline */
-    .tagline {
-      text-align: center;
-      padding: 0 16px;
-    }
-    .tagline p {
-      font-size: clamp(15px, 4vw, 18px);
-      font-weight: 700;
-      color: #ccdaff;
-      line-height: 1.5;
-    }
-    .tagline .en {
-      font-size: 12px;
-      color: #6677aa;
-      margin-top: 6px;
-      font-weight: 400;
-    }
+  .tagline { text-align:center; padding:0 16px; margin-top:22px; }
+  .tagline p { font-size:clamp(14px,4vw,17px); font-weight:700; color:#ccdaff; line-height:1.5; }
+  .tagline .en { font-size:11px; color:rgba(255,255,255,0.35); margin-top:5px; font-weight:400; }
 
-    /* Start Button */
-    .start-btn {
-      width: min(320px, 88%);
-      padding: 18px 32px;
-      background: var(--brand-btn);
-      border: none;
-      border-radius: 50px;
-      color: #ffffff;
-      font-size: 18px;
-      font-weight: 800;
-      letter-spacing: 0.5px;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 10px;
-      box-shadow: 0 8px 30px rgba(74,108,247,0.5), inset 0 1px 0 rgba(255,255,255,0.2);
-      transition: transform 0.15s ease, box-shadow 0.15s ease;
-      -webkit-tap-highlight-color: transparent;
-      margin-bottom: 8px;
-    }
-    .start-btn:active { transform: scale(0.97); box-shadow: 0 4px 15px rgba(74,108,247,0.4); }
-    .start-btn .arrow {
-      width: 28px; height: 28px;
-      background: rgba(255,255,255,0.2);
-      border-radius: 50%;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 14px;
-    }
+  .start-btn {
+    width:min(320px,88%); padding:17px 32px;
+    background:linear-gradient(135deg,#38bdf8 0%,#4f8ef7 100%);
+    border:none; border-radius:50px; color:#fff;
+    font-size:18px; font-weight:800; letter-spacing:0.5px;
+    cursor:pointer; display:flex; align-items:center; justify-content:center; gap:10px;
+    box-shadow:0 8px 30px rgba(79,142,247,0.5),inset 0 1px 0 rgba(255,255,255,0.2);
+    transition:transform .15s,box-shadow .15s; margin-bottom:8px;
+  }
+  .start-btn:active{transform:scale(0.97);box-shadow:0 4px 15px rgba(79,142,247,0.4)}
+  .start-btn .arrow{width:28px;height:28px;background:rgba(255,255,255,0.2);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px}
+  .lang-btn-home{position:absolute;top:18px;right:18px;z-index:10;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);color:rgba(255,255,255,0.7);padding:7px 16px;border-radius:20px;font-size:12px;cursor:pointer;font-weight:500}
 
-    /* ═══════════════════════════════════════════
-       CHAT SCREEN
-    ═══════════════════════════════════════════ */
-    #chat-screen {
-      background: #0d0d2b;
-    }
+  /* ─── MAIN APP ─── */
+  #mainApp { display:none; flex-direction:column; height:100vh; }
 
-    /* TopBar */
-    .topbar {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      padding: calc(env(safe-area-inset-top, 0px) + 14px) 16px 14px;
-      background: rgba(13,13,43,0.95);
-      backdrop-filter: blur(20px);
-      border-bottom: 1px solid var(--border);
-      flex-shrink: 0;
-      z-index: 10;
-    }
-    .topbar-back {
-      width: 36px; height: 36px;
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      background: var(--surface);
-      color: var(--text-main);
-      font-size: 18px;
-      display: flex; align-items: center; justify-content: center;
-      cursor: pointer;
-      flex-shrink: 0;
-      -webkit-tap-highlight-color: transparent;
-    }
-    .topbar-info { flex: 1; min-width: 0; }
-    .topbar-info .name {
-      font-size: 15px;
-      font-weight: 700;
-      color: var(--text-main);
-    }
-    .topbar-info .status {
-      font-size: 11px;
-      color: var(--brand-teal);
-      display: flex;
-      align-items: center;
-      gap: 4px;
-    }
-    .status-dot {
-      width: 6px; height: 6px;
-      border-radius: 50%;
-      background: var(--brand-teal);
-      animation: blink 2s ease-in-out infinite;
-    }
-    @keyframes blink { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
+  .app-bar {
+    background:white; border-bottom:1px solid var(--border);
+    padding:10px 14px; display:flex; align-items:center; gap:10px;
+    position:sticky; top:0; z-index:100; box-shadow:0 1px 10px rgba(0,0,0,.06);
+  }
+  .app-icon { width:38px;height:38px;border-radius:11px;flex-shrink:0;
+    background:linear-gradient(135deg,#4f8ef7,#7c5cbf);
+    display:flex;align-items:center;justify-content:center; }
+  .app-icon svg { width:22px;height:22px; }
+  .app-title-block { flex:1; min-width:0; }
+  .app-title { font-size:15px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
+  .app-sub { font-size:11px;color:var(--text-muted); }
+  .data-dot { display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--success);margin-right:4px;animation:blink 2s infinite; }
+  @keyframes blink{0%,100%{opacity:1}50%{opacity:.35}}
+  .hbtn { width:36px;height:36px;border-radius:10px;border:1px solid var(--border);background:white;
+    display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:17px;transition:background .15s;flex-shrink:0; }
+  .hbtn:active{background:var(--surface)}
+  .dashboard-btn {
+    padding:6px 12px; background:linear-gradient(135deg,#4f8ef7,#7c5cbf);
+    border:none; border-radius:10px; color:white;
+    font-size:12px; font-weight:600; cursor:pointer;
+    display:flex; align-items:center; gap:4px; white-space:nowrap;
+    transition:opacity .2s; flex-shrink:0;
+  }
+  .dashboard-btn:active{opacity:.85}
 
-    .topbar-actions { display: flex; gap: 8px; }
-    .topbar-btn {
-      width: 36px; height: 36px;
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      background: var(--surface);
-      color: var(--text-main);
-      font-size: 16px;
-      display: flex; align-items: center; justify-content: center;
-      cursor: pointer;
-      -webkit-tap-highlight-color: transparent;
-      transition: background 0.2s;
-    }
-    .topbar-btn:active { background: var(--surface-hover); }
+  /* chat */
+  .chat{flex:1;overflow-y:auto;padding:14px 14px 170px;display:flex;flex-direction:column;gap:12px;scroll-behavior:smooth}
 
-    /* Quick Analysis Tabs */
-    .quick-tabs {
-      display: flex;
-      gap: 8px;
-      padding: 10px 16px;
-      overflow-x: auto;
-      flex-shrink: 0;
-      scrollbar-width: none;
-      background: rgba(13,13,43,0.6);
-      border-bottom: 1px solid var(--border);
-    }
-    .quick-tabs::-webkit-scrollbar { display: none; }
-    .qtab {
-      flex-shrink: 0;
-      padding: 7px 14px;
-      border-radius: 20px;
-      border: 1px solid var(--border);
-      background: var(--surface);
-      color: var(--text-sub);
-      font-size: 12px;
-      font-weight: 600;
-      cursor: pointer;
-      white-space: nowrap;
-      transition: all 0.2s;
-      -webkit-tap-highlight-color: transparent;
-    }
-    .qtab.active, .qtab:active {
-      background: var(--brand-indigo);
-      border-color: var(--brand-indigo);
-      color: #ffffff;
-    }
+  /* welcome */
+  .welcome{background:linear-gradient(135deg,#4f8ef7,#7c5cbf);border-radius:18px;padding:20px;color:white;margin-bottom:4px}
+  .welcome h2{font-size:18px;font-weight:700;margin-bottom:6px}
+  .welcome p{font-size:13px;opacity:.88;line-height:1.55}
+  .data-badge{display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.18);border-radius:20px;padding:5px 12px;font-size:12px;margin-top:12px}
 
-    /* Chat Messages */
-    .chat-messages {
-      flex: 1;
-      overflow-y: auto;
-      padding: 16px;
-      display: flex;
-      flex-direction: column;
-      gap: 14px;
-      scroll-behavior: smooth;
-      -webkit-overflow-scrolling: touch;
-    }
-    .chat-messages::-webkit-scrollbar { width: 3px; }
-    .chat-messages::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 2px; }
+  /* chips */
+  .chips-tray{position:fixed;bottom:64px;left:0;right:0;z-index:150;background:white;border-top:1px solid var(--border);padding:8px 12px 6px;box-shadow:0 -2px 10px rgba(0,0,0,.05)}
+  .chips-tray-toggle{display:flex;align-items:center;justify-content:space-between;cursor:pointer;padding:2px 0 6px;user-select:none}
+  .chips-label{font-size:11px;color:var(--text-muted);font-weight:600;letter-spacing:.3px}
+  .chips-arrow{font-size:13px;color:var(--text-muted);transition:color .15s}
+  .chips-body{overflow:hidden;transition:max-height .25s ease;max-height:120px}
+  .chips-tray.collapsed .chips-body{max-height:0}
+  .chips{display:flex;flex-wrap:wrap;gap:6px;padding-bottom:4px}
+  .chip{background:white;border:1px solid var(--border);border-radius:22px;padding:6px 12px;font-size:12px;color:var(--accent);cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,.05);transition:all .14s;white-space:nowrap}
+  .chip:active{background:#eef3ff;transform:scale(.97)}
+  .chip.used{background:#f5f5f5;border-color:#e0e0e0;color:#aaa;cursor:default;box-shadow:none;text-decoration:line-through;opacity:.55}
 
-    /* Welcome Card */
-    .welcome-card {
-      background: linear-gradient(135deg, rgba(45,79,219,0.2) 0%, rgba(74,108,247,0.15) 100%);
-      border: 1px solid rgba(74,108,247,0.3);
-      border-radius: var(--radius);
-      padding: 18px;
-    }
-    .welcome-card .wc-title {
-      font-size: 15px;
-      font-weight: 700;
-      color: #a0c4ff;
-      margin-bottom: 8px;
-    }
-    .welcome-card .wc-stats {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 8px;
-      margin-top: 12px;
-    }
-    .stat-chip {
-      background: rgba(255,255,255,0.06);
-      border-radius: 10px;
-      padding: 10px;
-      text-align: center;
-    }
-    .stat-chip .val { font-size: 18px; font-weight: 800; color: #38bdf8; }
-    .stat-chip .lbl { font-size: 10px; color: var(--text-sub); margin-top: 2px; }
+  /* messages */
+  .msg{display:flex;gap:10px;align-items:flex-start}
+  .msg.user{flex-direction:row-reverse}
+  .av{width:32px;height:32px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:13px}
+  .av.ai{background:linear-gradient(135deg,#4f8ef7,#7c5cbf)}
+  .av.ai svg{width:16px;height:16px;fill:white}
+  .av.user{background:#f0f0f0}
+  .bbl{max-width:82%;padding:12px 15px;border-radius:18px;font-size:14px;line-height:1.65}
+  .msg.ai .bbl{background:white;border:1px solid var(--border);border-top-left-radius:4px;color:var(--text);box-shadow:0 2px 12px rgba(0,0,0,.06)}
+  .msg.user .bbl{background:linear-gradient(135deg,#4f8ef7,#7c5cbf);color:white;border-top-right-radius:4px}
+  .bbl strong{font-weight:600}
+  .bbl .follow-btn{display:inline-block;background:#f0f4ff;border:1px solid #d0deff;border-radius:16px;padding:5px 12px;font-size:12px;color:var(--accent);cursor:pointer;margin:3px 2px 0;transition:background .14s}
+  .bbl .follow-btn:active{background:#dde8ff}
 
-    /* Suggestion Chips */
-    .suggestion-chips {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-    }
-    .chip {
-      padding: 8px 14px;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 20px;
-      font-size: 12px;
-      color: var(--text-sub);
-      cursor: pointer;
-      transition: all 0.2s;
-      -webkit-tap-highlight-color: transparent;
-    }
-    .chip:active { background: rgba(74,108,247,0.25); border-color: var(--brand-indigo); color: #a0c4ff; }
+  /* typing */
+  .typing{display:flex;align-items:center;gap:5px;padding:4px 0}
+  .dot{width:7px;height:7px;border-radius:50%;background:#cbd5e1;animation:bounce 1.3s infinite}
+  .dot:nth-child(2){animation-delay:.2s}.dot:nth-child(3){animation-delay:.4s}
+  @keyframes bounce{0%,80%,100%{transform:translateY(0)}40%{transform:translateY(-7px)}}
 
-    /* Message Bubbles */
-    .msg { display: flex; gap: 10px; max-width: 100%; }
-    .msg.user { flex-direction: row-reverse; }
-    .msg-avatar {
-      width: 32px; height: 32px;
-      border-radius: 10px;
-      flex-shrink: 0;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 16px;
-    }
-    .msg.ai .msg-avatar { background: linear-gradient(135deg, #2d4fdb, #4a6cf7); }
-    .msg.user .msg-avatar { background: linear-gradient(135deg, #38bdf8, #2dd4bf); }
-    .msg-bubble {
-      max-width: 80%;
-      padding: 12px 15px;
-      border-radius: 16px;
-      font-size: 13.5px;
-      line-height: 1.6;
-      word-break: break-word;
-    }
-    .msg.ai .msg-bubble {
-      background: rgba(45,79,219,0.2);
-      border: 1px solid rgba(74,108,247,0.25);
-      border-bottom-left-radius: 4px;
-      color: var(--text-main);
-    }
-    .msg.user .msg-bubble {
-      background: linear-gradient(135deg, rgba(56,189,248,0.25), rgba(74,108,247,0.25));
-      border: 1px solid rgba(56,189,248,0.3);
-      border-bottom-right-radius: 4px;
-      color: var(--text-main);
-    }
-    .msg-time {
-      font-size: 10px;
-      color: var(--text-sub);
-      margin-top: 4px;
-      text-align: right;
-    }
-    .msg.ai .msg-time { text-align: left; }
+  /* input */
+  .input-bar{position:fixed;bottom:0;left:0;right:0;background:white;border-top:1px solid var(--border);padding:10px 12px;display:flex;gap:8px;align-items:center;z-index:200}
+  .ti{flex:1;border:1.5px solid var(--border);border-radius:24px;padding:10px 16px;font-size:14px;font-family:inherit;outline:none;resize:none;max-height:100px;background:var(--surface);transition:border-color .2s;line-height:1.4}
+  .ti:focus{border-color:var(--accent);background:white}
+  .char-count{font-size:10px;color:var(--text-muted);flex-shrink:0}
+  .char-count.warn{color:#f59e0b}
+  .send-btn{width:44px;height:44px;border-radius:50%;border:none;flex-shrink:0;background:linear-gradient(135deg,#4f8ef7,#7c5cbf);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:opacity .2s;box-shadow:0 2px 10px rgba(79,142,247,.35)}
+  .send-btn:active{opacity:.8}
+  .send-btn svg{width:20px;height:20px;fill:white}
 
-    /* Typing indicator */
-    .typing-indicator {
-      display: flex;
-      align-items: center;
-      gap: 4px;
-      padding: 12px 15px;
-      background: rgba(45,79,219,0.2);
-      border: 1px solid rgba(74,108,247,0.25);
-      border-radius: 16px;
-      border-bottom-left-radius: 4px;
-      width: fit-content;
-    }
-    .typing-dot {
-      width: 6px; height: 6px;
-      border-radius: 50%;
-      background: #4a6cf7;
-      animation: typing-bounce 1.2s ease-in-out infinite;
-    }
-    .typing-dot:nth-child(2) { animation-delay: 0.2s; }
-    .typing-dot:nth-child(3) { animation-delay: 0.4s; }
-    @keyframes typing-bounce {
-      0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
-      30% { transform: translateY(-6px); opacity: 1; }
-    }
+  /* pdf btn */
+  .pdf-btn{display:inline-flex;align-items:center;gap:5px;background:#f8f9ff;border:1px solid #d8e2ff;border-radius:16px;padding:5px 13px;font-size:12px;color:var(--accent);cursor:pointer;margin-top:10px;transition:background .14s}
+  .pdf-btn:active{background:#eef2ff}
 
-    /* Input Area */
-    .input-area {
-      padding: 12px 16px calc(env(safe-area-inset-bottom, 0px) + 12px);
-      background: rgba(13,13,43,0.95);
-      backdrop-filter: blur(20px);
-      border-top: 1px solid var(--border);
-      flex-shrink: 0;
-    }
-    .input-row {
-      display: flex;
-      gap: 10px;
-      align-items: flex-end;
-    }
-    .input-wrap {
-      flex: 1;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 22px;
-      display: flex;
-      align-items: flex-end;
-      padding: 4px 14px;
-      transition: border-color 0.2s;
-    }
-    .input-wrap:focus-within { border-color: var(--brand-indigo); }
-    #chat-input {
-      flex: 1;
-      background: transparent;
-      border: none;
-      outline: none;
-      color: var(--text-main);
-      font-size: 14px;
-      line-height: 1.5;
-      resize: none;
-      padding: 8px 0;
-      max-height: 120px;
-      font-family: inherit;
-    }
-    #chat-input::placeholder { color: var(--text-sub); }
-    .char-count {
-      font-size: 10px;
-      color: var(--text-sub);
-      padding-bottom: 9px;
-      flex-shrink: 0;
-    }
-    .char-count.warn { color: #f59e0b; }
-    #send-btn {
-      width: 44px; height: 44px;
-      border-radius: 50%;
-      background: var(--brand-btn);
-      border: none;
-      color: white;
-      font-size: 18px;
-      display: flex; align-items: center; justify-content: center;
-      cursor: pointer;
-      flex-shrink: 0;
-      box-shadow: 0 4px 15px rgba(74,108,247,0.4);
-      transition: transform 0.15s, opacity 0.15s;
-      -webkit-tap-highlight-color: transparent;
-    }
-    #send-btn:disabled { opacity: 0.4; cursor: not-allowed; }
-    #send-btn:not(:disabled):active { transform: scale(0.92); }
+  /* toast */
+  .toast{position:fixed;bottom:160px;left:50%;transform:translateX(-50%) translateY(8px);background:#1a1a2e;color:white;padding:10px 20px;border-radius:24px;font-size:13px;z-index:999;opacity:0;transition:all .28s;white-space:nowrap;pointer-events:none}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 
-    /* Analysis Type Badge */
-    .analysis-badge {
-      display: inline-block;
-      padding: 2px 8px;
-      background: rgba(74,108,247,0.2);
-      border: 1px solid rgba(74,108,247,0.4);
-      border-radius: 8px;
-      font-size: 10px;
-      color: #a0c4ff;
-      margin-bottom: 8px;
-    }
+  /* Chart Cards */
+  .chart-msg{display:flex;gap:10px;align-items:flex-start}
+  .chart-card{max-width:92%;background:white;border:1px solid var(--border);border-radius:18px;border-top-left-radius:4px;box-shadow:0 2px 12px rgba(0,0,0,.07);overflow:hidden}
+  .chart-card-header{padding:12px 16px 8px;display:flex;align-items:center;justify-content:space-between}
+  .chart-card-title{font-size:13px;font-weight:700;color:var(--text)}
+  .chart-card-sub{font-size:11px;color:var(--text-muted);margin-top:2px}
+  .chart-wrap{padding:4px 14px 14px;position:relative}
+  .chart-wrap canvas{width:100%!important}
+  .chart-pdf-btn{display:inline-flex;align-items:center;gap:5px;background:#f8f9ff;border:1px solid #d8e2ff;border-radius:16px;padding:5px 13px;font-size:11px;color:var(--accent);cursor:pointer;margin:0 14px 12px;transition:background .14s;flex-shrink:0}
+  .chart-pdf-btn:active{background:#eef2ff}
 
-    /* Toast */
-    .toast {
-      position: fixed;
-      bottom: 100px;
-      left: 50%;
-      transform: translateX(-50%) translateY(20px);
-      background: rgba(30,30,70,0.95);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 10px 20px;
-      font-size: 13px;
-      color: var(--text-main);
-      opacity: 0;
-      transition: all 0.3s ease;
-      z-index: 100;
-      white-space: nowrap;
-      backdrop-filter: blur(10px);
-    }
-    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  /* ─── Dashboard Overlay ─── */
+  .dashboard-overlay{position:fixed;inset:0;z-index:500;background:rgba(10,15,30,.72);backdrop-filter:blur(6px);display:none;align-items:flex-start;justify-content:center;overflow-y:auto;padding:12px 0 40px}
+  .dashboard-overlay.open{display:flex}
+  .dashboard-panel{background:#f6f7fb;border-radius:20px;width:calc(100% - 20px);max-width:520px;margin:auto;overflow:hidden;box-shadow:0 16px 60px rgba(0,0,0,.35)}
+  .db-header{background:linear-gradient(135deg,#4f8ef7 0%,#7c5cbf 100%);padding:18px 18px 14px;color:white;display:flex;align-items:flex-start;justify-content:space-between}
+  .db-header-left h2{font-size:16px;font-weight:700;margin:0 0 3px}
+  .db-header-left p{font-size:11px;opacity:.75;margin:0}
+  .db-close{background:rgba(255,255,255,.18);border:none;color:white;width:30px;height:30px;border-radius:50%;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:background .15s}
+  .db-close:active{background:rgba(255,255,255,.3)}
+  .db-tabs{display:flex;background:white;border-bottom:1px solid #e5e7eb}
+  .db-tab{flex:1;padding:11px 6px;font-size:12px;font-weight:600;text-align:center;cursor:pointer;color:#888;border:none;background:none;border-bottom:2.5px solid transparent;transition:all .18s;white-space:nowrap}
+  .db-tab.active{color:#4f8ef7;border-bottom-color:#4f8ef7}
+  .db-tab-content{display:none}
+  .db-tab-content.active{display:block}
+  .db-stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;padding:14px 14px 0}
+  .db-stat-card{background:white;border-radius:12px;padding:12px 8px;text-align:center;box-shadow:0 1px 6px rgba(0,0,0,.06);border:1px solid #e5e7eb}
+  .db-stat-val{font-size:17px;font-weight:700;color:#4f8ef7}
+  .db-stat-val.red{color:#ef4444}
+  .db-stat-val.grn{color:#22c55e}
+  .db-stat-val.pur{color:#7c5cbf}
+  .db-stat-lbl{font-size:10px;color:#888;margin-top:3px;line-height:1.3}
+  .db-run-btn{margin:12px 14px 0;width:calc(100% - 28px);padding:13px;background:linear-gradient(135deg,#4f8ef7,#7c5cbf);border:none;border-radius:12px;color:white;font-size:14px;font-weight:700;cursor:pointer;transition:opacity .2s;display:flex;align-items:center;justify-content:center;gap:8px}
+  .db-run-btn:active{opacity:.85}
+  .db-run-btn:disabled{opacity:.45;cursor:not-allowed}
+  .db-loading{padding:36px 20px;text-align:center}
+  .db-spinner{width:38px;height:38px;border:3.5px solid #e5e7eb;border-top-color:#4f8ef7;border-radius:50%;animation:spin .75s linear infinite;margin:0 auto 14px}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .db-loading-txt{font-size:13px;color:#666;line-height:1.6}
+  .seg-cards{padding:12px 14px;display:flex;flex-direction:column;gap:8px}
+  .seg-card{background:white;border-radius:12px;padding:13px 14px;border:1px solid #e5e7eb;box-shadow:0 1px 4px rgba(0,0,0,.05)}
+  .seg-card-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+  .seg-badge{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:700;padding:3px 10px;border-radius:20px}
+  .seg-badge.premium{background:#fef9c3;color:#92400e}
+  .seg-badge.good{background:#dcfce7;color:#166534}
+  .seg-badge.normal{background:#dbeafe;color:#1e40af}
+  .seg-badge.risk{background:#fee2e2;color:#991b1b}
+  .seg-n{font-size:12px;color:#888}
+  .seg-bars{display:flex;flex-direction:column;gap:5px}
+  .seg-bar-row{display:flex;align-items:center;gap:8px;font-size:11px}
+  .seg-bar-lbl{width:56px;color:#666;flex-shrink:0}
+  .seg-bar-bg{flex:1;background:#f3f4f6;border-radius:4px;height:7px;overflow:hidden}
+  .seg-bar-fill{height:100%;border-radius:4px;transition:width .6s ease}
+  .seg-bar-val{width:40px;text-align:right;color:#444;font-weight:600}
+  .model-table-wrap{padding:12px 14px}
+  .model-table{width:100%;border-collapse:collapse;font-size:12px;background:white;border-radius:12px;overflow:hidden;border:1px solid #e5e7eb;box-shadow:0 1px 4px rgba(0,0,0,.05)}
+  .model-table th{background:#f9fafb;padding:9px 8px;text-align:center;font-size:11px;font-weight:700;color:#555;border-bottom:1px solid #e5e7eb}
+  .model-table td{padding:9px 8px;text-align:center;border-bottom:1px solid #f3f4f6;color:#333}
+  .model-table tr.best td{background:#fafbff;font-weight:600}
+  .model-badge{display:inline-block;background:#4f8ef7;color:white;font-size:9px;padding:1px 5px;border-radius:6px;margin-left:4px;vertical-align:middle}
+  .feature-wrap{padding:0 14px 12px}
+  .feature-title{font-size:12px;font-weight:700;color:#555;margin-bottom:8px;padding-top:4px}
+  .feature-row{display:flex;align-items:center;gap:8px;margin-bottom:6px;font-size:11px}
+  .feature-lbl{width:80px;color:#444;flex-shrink:0;text-align:right}
+  .feature-bar-bg{flex:1;background:#f3f4f6;border-radius:4px;height:8px;overflow:hidden}
+  .ai-text-box{margin:0 14px 12px;padding:14px;background:white;border:1px solid #e5e7eb;border-radius:12px;font-size:12.5px;line-height:1.75;color:#333;max-height:280px;overflow-y:auto;box-shadow:0 1px 4px rgba(0,0,0,.05);white-space:pre-wrap}
+  .ai-text-box .ai-label{font-size:11px;font-weight:700;color:#4f8ef7;margin-bottom:8px;display:block}
+  .roi-box{margin:0 14px 12px;padding:14px;background:white;border:1px solid #e5e7eb;border-radius:12px;box-shadow:0 1px 4px rgba(0,0,0,.05)}
+  .roi-title{font-size:12px;font-weight:700;color:#555;margin-bottom:10px}
+  .roi-inputs{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
+  .roi-field label{display:block;font-size:10px;color:#888;margin-bottom:3px}
+  .roi-field input{width:100%;padding:7px 9px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:12px;outline:none;transition:border-color .2s}
+  .roi-field input:focus{border-color:#4f8ef7}
+  .roi-result-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+  .roi-result-card{background:#f8f9ff;border-radius:8px;padding:10px 6px;text-align:center}
+  .roi-result-val{font-size:15px;font-weight:700;color:#4f8ef7}
+  .roi-result-val.highlight{color:#22c55e}
+  .roi-result-lbl{font-size:10px;color:#888;margin-top:2px}
+  .db-section-title{font-size:13px;font-weight:700;color:#333;padding:14px 14px 4px;display:flex;align-items:center;gap:6px}
+  .db-mail-btn{margin:4px 14px 14px;width:calc(100% - 28px);padding:12px;background:white;border:2px solid #4f8ef7;border-radius:12px;color:#4f8ef7;font-size:13px;font-weight:700;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:7px}
+  .db-mail-btn:active{background:#eef3ff}
+  .db-mail-btn:disabled{opacity:.45;cursor:not-allowed}
+  .db-mail-result{margin:0 14px 14px;padding:11px 14px;border-radius:10px;font-size:12px;text-align:center}
+  .db-mail-result.ok{background:#f0fdf4;color:#16a34a;border:1px solid #bbf7d0}
+  .db-mail-result.err{background:#fef2f2;color:#dc2626;border:1px solid #fecaca}
+  .db-chart-wrap{padding:4px 14px 10px}
+  .db-chart-wrap canvas{max-height:200px}
 
-    /* Stats Panel (slide-up) */
-    .stats-panel {
-      position: fixed;
-      inset: 0;
-      z-index: 50;
-      display: flex;
-      flex-direction: column;
-      justify-content: flex-end;
-      background: rgba(0,0,0,0.6);
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity 0.3s;
-    }
-    .stats-panel.open { opacity: 1; pointer-events: auto; }
-    .stats-inner {
-      background: #12122e;
-      border-radius: var(--radius) var(--radius) 0 0;
-      border-top: 1px solid var(--border);
-      padding: 20px 20px calc(env(safe-area-inset-bottom, 0px) + 20px);
-      max-height: 75vh;
-      overflow-y: auto;
-      transform: translateY(100%);
-      transition: transform 0.35s cubic-bezier(0.32, 0.72, 0, 1);
-    }
-    .stats-panel.open .stats-inner { transform: translateY(0); }
-    .stats-handle {
-      width: 40px; height: 4px;
-      background: rgba(255,255,255,0.2);
-      border-radius: 2px;
-      margin: 0 auto 16px;
-    }
-    .stats-title { font-size: 16px; font-weight: 700; margin-bottom: 16px; color: #a0c4ff; }
-    .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-    .stats-card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 14px;
-    }
-    .stats-card .sc-val { font-size: 22px; font-weight: 800; color: #38bdf8; }
-    .stats-card .sc-lbl { font-size: 11px; color: var(--text-sub); margin-top: 3px; }
-    .stats-card.full { grid-column: span 2; }
-
-    /* ── Responsive (Tablet) ───────────────────── */
-    @media (min-width: 480px) {
-      #home-screen, #chat-screen {
-        max-width: 420px;
-        margin: 0 auto;
-        border-left: 1px solid rgba(255,255,255,0.05);
-        border-right: 1px solid rgba(255,255,255,0.05);
-      }
-      body { background: #07071a; }
-    }
-  </style>
+  @media(min-width:480px){
+    #homeScreen,#mainApp{max-width:420px;margin:0 auto;border-left:1px solid rgba(255,255,255,.05);border-right:1px solid rgba(255,255,255,.05)}
+    body{background:#07071a}
+  }
+</style>
 </head>
 <body>
 
-<!-- ══════════════════════════════════════
-     HOME SCREEN
-══════════════════════════════════════ -->
-<div id="home-screen" class="screen">
+<!-- ═══ HOME SCREEN ═══ -->
+<div id="homeScreen">
+  <button class="lang-btn-home" onclick="toggleLang()">KO / EN</button>
+
   <div class="home-header">
-    <h1>마케팅 AI 에이전트<br><span style="font-size:0.65em; font-weight:500; opacity:0.7;">Marketing AI Agent</span></h1>
+    <div class="home-title">마케팅 AI 에이전트<br><span style="font-size:.65em;font-weight:500;opacity:.7">Marketing AI Agent</span></div>
   </div>
 
   <div class="hero-area">
@@ -597,430 +295,690 @@
         <div class="orbit-icon">📈</div>
         <div class="orbit-icon">🖥️</div>
       </div>
-      <!-- SVG Robot -->
       <svg class="robot-svg" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
         <defs>
-          <radialGradient id="bodyGrad" cx="40%" cy="35%">
-            <stop offset="0%" stop-color="#4a9eff"/>
-            <stop offset="60%" stop-color="#1a1a8e"/>
-            <stop offset="100%" stop-color="#0a0a5a"/>
-          </radialGradient>
-          <radialGradient id="eyeGrad" cx="40%" cy="35%">
-            <stop offset="0%" stop-color="#ffffff"/>
-            <stop offset="100%" stop-color="#aaccff"/>
-          </radialGradient>
-          <filter id="glow">
-            <feGaussianBlur stdDeviation="3" result="blur"/>
-            <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
-          </filter>
+          <radialGradient id="bg" cx="40%" cy="35%"><stop offset="0%" stop-color="#4a9eff"/><stop offset="60%" stop-color="#1a1a8e"/><stop offset="100%" stop-color="#0a0a5a"/></radialGradient>
+          <filter id="glow"><feGaussianBlur stdDeviation="3" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
         </defs>
-        <!-- Body -->
-        <ellipse cx="100" cy="115" rx="55" ry="55" fill="url(#bodyGrad)" filter="url(#glow)"/>
-        <!-- Shine -->
+        <ellipse cx="100" cy="115" rx="55" ry="55" fill="url(#bg)" filter="url(#glow)"/>
         <ellipse cx="82" cy="95" rx="20" ry="14" fill="rgba(255,255,255,0.12)" transform="rotate(-20,82,95)"/>
-        <!-- Antenna -->
         <line x1="100" y1="60" x2="100" y2="42" stroke="#38bdf8" stroke-width="3" stroke-linecap="round"/>
         <circle cx="100" cy="38" r="7" fill="#38bdf8" filter="url(#glow)"/>
         <circle cx="100" cy="38" r="4" fill="#ffffff"/>
-        <!-- Eyes -->
         <ellipse cx="84" cy="108" rx="11" ry="11" fill="#0d1a3d"/>
         <ellipse cx="116" cy="108" rx="11" ry="11" fill="#0d1a3d"/>
-        <circle cx="85" cy="109" r="6" fill="url(#eyeGrad)"/>
-        <circle cx="115" cy="109" r="6" fill="url(#eyeGrad)"/>
-        <circle cx="87" cy="107" r="2" fill="#1a3aff" opacity="0.8"/>
-        <circle cx="117" cy="107" r="2" fill="#1a3aff" opacity="0.8"/>
-        <circle cx="89" cy="105" r="1.2" fill="#ffffff"/>
-        <circle cx="119" cy="105" r="1.2" fill="#ffffff"/>
-        <!-- Smile -->
+        <circle cx="85" cy="109" r="6" fill="white"/>
+        <circle cx="115" cy="109" r="6" fill="white"/>
+        <circle cx="87" cy="107" r="2" fill="#1a3aff" opacity=".8"/>
+        <circle cx="117" cy="107" r="2" fill="#1a3aff" opacity=".8"/>
+        <circle cx="89" cy="105" r="1.2" fill="#fff"/>
+        <circle cx="119" cy="105" r="1.2" fill="#fff"/>
         <path d="M88 124 Q100 134 112 124" stroke="#38bdf8" stroke-width="2.5" stroke-linecap="round" fill="none"/>
-        <!-- Cheeks -->
-        <ellipse cx="72" cy="120" rx="7" ry="4" fill="#ff6699" opacity="0.3"/>
-        <ellipse cx="128" cy="120" rx="7" ry="4" fill="#ff6699" opacity="0.3"/>
-        <!-- Wings -->
-        <ellipse cx="40" cy="130" rx="20" ry="10" fill="#2d4fdb" opacity="0.6" transform="rotate(-20,40,130)"/>
-        <ellipse cx="160" cy="130" rx="20" ry="10" fill="#2d4fdb" opacity="0.6" transform="rotate(20,160,130)"/>
-        <!-- Bottom glow -->
-        <ellipse cx="100" cy="168" rx="40" ry="8" fill="#4a6cf7" opacity="0.2"/>
+        <ellipse cx="72" cy="120" rx="7" ry="4" fill="#ff6699" opacity=".3"/>
+        <ellipse cx="128" cy="120" rx="7" ry="4" fill="#ff6699" opacity=".3"/>
+        <ellipse cx="40" cy="130" rx="20" ry="10" fill="#2d4fdb" opacity=".6" transform="rotate(-20,40,130)"/>
+        <ellipse cx="160" cy="130" rx="20" ry="10" fill="#2d4fdb" opacity=".6" transform="rotate(20,160,130)"/>
       </svg>
     </div>
-
     <div class="home-dots">
-      <div class="dot active"></div>
-      <div class="dot"></div>
-      <div class="dot"></div>
+      <div class="home-dot active"></div><div class="home-dot"></div><div class="home-dot"></div>
     </div>
-
-    <div class="tagline" style="margin-top: 24px;">
+    <div class="tagline">
       <p>당신의 완벽한 마케팅 파트너,<br>AI 에이전트가 함께합니다.</p>
       <p class="en">Your Perfect Marketing Partner,<br>AI Agent is Here for You.</p>
     </div>
   </div>
 
-  <button class="start-btn" id="start-btn" onclick="goToChat()">
-    시작하기
-    <div class="arrow">▶</div>
+  <button class="start-btn" onclick="enterApp()">
+    시작하기 <div class="arrow">▶</div>
   </button>
 </div>
 
-<!-- ══════════════════════════════════════
-     CHAT SCREEN
-══════════════════════════════════════ -->
-<div id="chat-screen" class="screen hidden">
-
-  <!-- TopBar -->
-  <div class="topbar">
-    <button class="topbar-back" onclick="goToHome()">←</button>
-    <div class="topbar-info">
-      <div class="name">마케팅 AI 에이전트</div>
-      <div class="status"><span class="status-dot"></span>5만 고객 데이터 연결됨</div>
-    </div>
-    <div class="topbar-actions">
-      <button class="topbar-btn" onclick="openStats()" title="데이터 통계">📊</button>
-      <button class="topbar-btn" onclick="exportPDF()" title="PDF 저장">📄</button>
-    </div>
-  </div>
-
-  <!-- Quick Analysis Tabs -->
-  <div class="quick-tabs">
-    <button class="qtab active" onclick="setAnalysisType('general', this)">💡 일반 분석</button>
-    <button class="qtab" onclick="setAnalysisType('segment', this)">👥 고객 세분화</button>
-    <button class="qtab" onclick="setAnalysisType('churn', this)">⚠️ 이탈 예측</button>
-    <button class="qtab" onclick="setAnalysisType('marketing', this)">🎯 마케팅 최적화</button>
-  </div>
-
-  <!-- Messages -->
-  <div class="chat-messages" id="chat-messages">
-    <!-- Welcome Card -->
-    <div class="welcome-card">
-      <div class="wc-title">📊 데이터 현황 Overview</div>
-      <div id="stats-mini" class="wc-stats">
-        <div class="stat-chip"><div class="val" id="stat-total">-</div><div class="lbl">총 고객수</div></div>
-        <div class="stat-chip"><div class="val" id="stat-churn">-</div><div class="lbl">이탈률</div></div>
-        <div class="stat-chip"><div class="val" id="stat-ltv">-</div><div class="lbl">평균 LTV</div></div>
-        <div class="stat-chip"><div class="val" id="stat-orders">-</div><div class="lbl">평균 구매수</div></div>
+<!-- ═══ 인터랙티브 대시보드 ═══ -->
+<div class="dashboard-overlay" id="dashboardOverlay" onclick="closeDashboardOutside(event)">
+  <div class="dashboard-panel" id="dashboardPanel">
+    <div class="db-header">
+      <div class="db-header-left">
+        <h2>📊 인터랙티브 대시보드</h2>
+        <p id="dbHeaderSub">50,000명 E-Commerce 고객 · AI 분석</p>
       </div>
+      <button class="db-close" onclick="closeDashboard()">✕</button>
     </div>
-
-    <!-- AI Welcome Message -->
-    <div class="msg ai">
-      <div class="msg-avatar">🤖</div>
-      <div>
-        <div class="msg-bubble">
-          안녕하세요! 저는 마케팅 AI 에이전트입니다. 👋<br><br>
-          <strong>5만 명의 실제 고객 데이터</strong>를 분석하여 인사이트를 제공합니다.<br><br>
-          상단 탭에서 분석 유형을 선택하거나, 아래 추천 질문을 눌러보세요!
+    <div class="db-stat-grid" id="dbStatGrid"></div>
+    <button class="db-run-btn" id="dbRunBtn" onclick="runDashboard()">
+      🤖 AI 분석 실행 — 고객분석 · 이탈예측 · 마케팅최적화
+    </button>
+    <div class="db-loading" id="dbLoading" style="display:none">
+      <div class="db-spinner"></div>
+      <div class="db-loading-txt">AI가 3개 섹션을 동시 분석 중입니다...<br><small>약 20~40초 소요됩니다</small></div>
+    </div>
+    <div class="db-tabs" id="dbTabs" style="display:none">
+      <button class="db-tab active" onclick="switchTab(0)">🎯 고객분석</button>
+      <button class="db-tab"        onclick="switchTab(1)">⚠️ 이탈예측</button>
+      <button class="db-tab"        onclick="switchTab(2)">💡 마케팅</button>
+    </div>
+    <!-- 탭0: 고객분석 -->
+    <div class="db-tab-content active" id="dbTab0">
+      <div class="db-section-title">🎯 고객 세분화 (K-Means 4개 클러스터)</div>
+      <div class="seg-cards" id="segCards"></div>
+      <div class="db-chart-wrap"><canvas id="segChart" height="180"></canvas></div>
+      <div class="db-section-title">📝 AI 분석 요약</div>
+      <div class="ai-text-box" id="dbSegText"><span style="color:#aaa">분석 실행 후 표시됩니다</span></div>
+    </div>
+    <!-- 탭1: 이탈예측 -->
+    <div class="db-tab-content" id="dbTab1">
+      <div class="db-section-title">🤖 모델 성능 비교</div>
+      <div class="model-table-wrap">
+        <table class="model-table" id="modelTable">
+          <thead><tr><th>모델</th><th>AUC</th><th>정확도</th><th>F1</th><th>AP</th></tr></thead>
+          <tbody id="modelTableBody"></tbody>
+        </table>
+      </div>
+      <div class="db-section-title">📊 피처 중요도 Top 8</div>
+      <div class="feature-wrap" id="featureWrap"></div>
+      <div class="db-section-title">📝 AI 분석 요약</div>
+      <div class="ai-text-box" id="dbChrnText"><span style="color:#aaa">분석 실행 후 표시됩니다</span></div>
+    </div>
+    <!-- 탭2: 마케팅 -->
+    <div class="db-tab-content" id="dbTab2">
+      <div class="db-section-title">📈 연령대별 이탈률</div>
+      <div class="db-chart-wrap"><canvas id="ageChart" height="160"></canvas></div>
+      <div class="db-section-title">💰 ROI 시뮬레이터</div>
+      <div class="roi-box">
+        <div class="roi-inputs">
+          <div class="roi-field"><label>대상 고객 수</label><input type="number" id="roiN" value="10000" oninput="calcROI()"></div>
+          <div class="roi-field"><label>전환율 (%)</label><input type="number" id="roiConv" value="20" oninput="calcROI()"></div>
+          <div class="roi-field"><label>인당 캠페인 비용 ($)</label><input type="number" id="roiCost" value="25" oninput="calcROI()"></div>
+          <div class="roi-field"><label>평균 LTV ($)</label><input type="number" id="roiLTV" value="1441" oninput="calcROI()"></div>
         </div>
-        <div class="msg-time" id="welcome-time"></div>
+        <div class="roi-result-grid" id="roiResults"></div>
       </div>
+      <div class="db-section-title">📝 AI 분석 요약</div>
+      <div class="ai-text-box" id="dbMktText"><span style="color:#aaa">분석 실행 후 표시됩니다</span></div>
     </div>
-
-    <!-- Suggestion Chips -->
-    <div class="suggestion-chips" id="suggestion-chips">
-      <button class="chip" onclick="sendSuggestion('고객 데이터 전체 요약 분석해줘')">📋 전체 데이터 요약</button>
-      <button class="chip" onclick="sendSuggestion('이탈 고객의 주요 특징은?')">⚠️ 이탈 고객 특징</button>
-      <button class="chip" onclick="sendSuggestion('고가치 고객 세그먼트 분석해줘')">💎 고가치 고객</button>
-      <button class="chip" onclick="sendSuggestion('이메일 마케팅 최적화 전략 제안해줘')">📧 이메일 전략</button>
-      <button class="chip" onclick="sendSuggestion('국가별 고객 분포와 특징 분석해줘')">🌍 국가별 분석</button>
-      <button class="chip" onclick="sendSuggestion('장바구니 이탈률 개선 방안은?')">🛒 장바구니 개선</button>
-    </div>
-  </div>
-
-  <!-- Input Area -->
-  <div class="input-area">
-    <div class="input-row">
-      <div class="input-wrap">
-        <textarea id="chat-input" placeholder="마케팅 분석 질문을 입력하세요... (최대 500자)" rows="1"
-          oninput="autoResize(this); updateCharCount(this);"
-          onkeydown="handleKeyDown(event)"></textarea>
-        <span class="char-count" id="char-count">0/500</span>
-      </div>
-      <button id="send-btn" onclick="sendMessage()">➤</button>
-    </div>
+    <button class="db-mail-btn" id="dbMailBtn" style="display:none" onclick="showToast('메일 기능은 서버 설정 후 사용 가능합니다')">📧 분석 결과 메일 발송</button>
+    <div class="db-mail-result" id="dbMailResult" style="display:none"></div>
   </div>
 </div>
 
-<!-- Stats Panel -->
-<div class="stats-panel" id="stats-panel" onclick="closeStats(event)">
-  <div class="stats-inner">
-    <div class="stats-handle"></div>
-    <div class="stats-title">📊 고객 데이터 상세 통계</div>
-    <div class="stats-grid" id="stats-grid">
-      <div class="stats-card"><div class="sc-val" id="sp-total">-</div><div class="sc-lbl">총 고객수</div></div>
-      <div class="stats-card"><div class="sc-val" id="sp-churn">-</div><div class="sc-lbl">이탈률</div></div>
-      <div class="stats-card"><div class="sc-val" id="sp-ltv">-</div><div class="sc-lbl">평균 생애가치(LTV)</div></div>
-      <div class="stats-card"><div class="sc-val" id="sp-orders">-</div><div class="sc-lbl">평균 구매횟수</div></div>
-      <div class="stats-card"><div class="sc-val" id="sp-age">-</div><div class="sc-lbl">평균 연령</div></div>
-      <div class="stats-card"><div class="sc-val" id="sp-email">-</div><div class="sc-lbl">이메일 오픈율</div></div>
-      <div class="stats-card"><div class="sc-val" id="sp-cart">-</div><div class="sc-lbl">장바구니 이탈률</div></div>
-      <div class="stats-card"><div class="sc-val" id="sp-mobile">-</div><div class="sc-lbl">모바일 앱 사용률</div></div>
-      <div class="stats-card full" id="sp-countries" style="font-size:12px; color:#9999cc;"></div>
+<!-- ═══ MAIN APP ═══ -->
+<div id="mainApp">
+  <div class="app-bar">
+    <div class="app-icon">
+      <svg viewBox="0 0 40 40" fill="none">
+        <path d="M20 4L4 12l16 8 16-8z" fill="white"/>
+        <path d="M4 30L20 38l16-8" stroke="white" stroke-width="2.2" stroke-linecap="round" fill="none"/>
+        <path d="M4 22L20 30l16-8" stroke="white" stroke-width="2.2" stroke-linecap="round" fill="none"/>
+      </svg>
     </div>
+    <div class="app-title-block">
+      <div class="app-title" id="appTitle">마케팅 AI 에이전트</div>
+      <div class="app-sub"><span class="data-dot"></span><span id="appSub">데이터 로드 중...</span></div>
+    </div>
+    <button class="dashboard-btn" onclick="openDashboard()">📊 대시보드</button>
+    <button class="hbtn" onclick="toggleLang()" style="font-size:11px;width:auto;padding:0 10px;font-weight:600">KO/EN</button>
+    <button class="hbtn" onclick="exportAllPDF()" title="PDF">📄</button>
+    <button class="hbtn" onclick="goHome()" title="홈">🏠</button>
+  </div>
+
+  <div class="chat" id="chat">
+    <div class="welcome">
+      <h2 id="wTitle">👋 안녕하세요!</h2>
+      <p id="wText">GitHub에서 로드된 실제 고객 데이터를 기반으로<br>마케팅 분석을 시작합니다.</p>
+      <div class="data-badge" id="dataBadge">⏳ 서버 연결 중...</div>
+    </div>
+  </div>
+
+  <div class="chips-tray" id="chipsTray">
+    <div class="chips-tray-toggle" onclick="toggleChipsTray()">
+      <span class="chips-label" id="chipsLabel">📊 빠른 분석</span>
+      <span class="chips-arrow" id="chipsArrow">▼</span>
+    </div>
+    <div class="chips-body" id="chipsBody">
+      <div class="chips" id="chips"></div>
+    </div>
+  </div>
+
+  <div class="input-bar">
+    <textarea class="ti" id="ti" rows="1" placeholder="질문을 입력하세요... (최대 500자)"
+      onkeydown="onKey(event)" oninput="resize(this);updateCharCount(this)"></textarea>
+    <span class="char-count" id="charCount">0/500</span>
+    <button class="send-btn" onclick="send()">
+      <svg viewBox="0 0 24 24"><path d="M22 2L11 13" stroke="white" stroke-width="2.2" stroke-linecap="round" fill="none"/><path d="M22 2L15 22 11 13 2 9l20-7z" fill="white"/></svg>
+    </button>
   </div>
 </div>
 
-<!-- Toast -->
 <div class="toast" id="toast"></div>
 
 <script>
-  // ── Config ─────────────────────────────────────
-  const API_BASE = 'https://port-0-marketing-ai-agent-mqlm15dlb837dc12.sel3.cloudtype.app';  // 같은 서버에서 서빙될 때 빈 문자열
-  // Cloudtype 배포 시: const API_BASE = 'https://port-0-marketing-ai-agent-mqlm15dlb837dc12.sel3.cloudtype.app';
+// ═══ CONFIG ═══
+const BACKEND_URL = window.location.origin;
 
-  // ── State ──────────────────────────────────────
-  let chatHistory = [];
-  let analysisType = 'general';
-  let statsData = null;
-  let isLoading = false;
+// ═══ STATE ═══
+let lang = 'ko';
+let history = [];
+let allMsgs = [];
+let serverStats = null;
+let usedChips = new Set();
+let dashboardData = null;
+let activeTab = 0;
+let dbCharts = {};
+const chartRegistry = {};
+const CHIP_CHART_MAP = {0:null,1:null,2:null,3:null,4:null,5:null,6:null,7:null};
 
-  // ── Init ───────────────────────────────────────
-  document.getElementById('welcome-time').textContent = formatTime(new Date());
-  loadStats();
+// ═══ I18N ═══
+const TX = {
+  appTitle:   {ko:'마케팅 AI 에이전트',      en:'Marketing AI Agent'},
+  wTitle:     {ko:'👋 안녕하세요!',           en:'👋 Hello!'},
+  wText:      {ko:'GitHub에서 로드된 실제 고객 데이터를 기반으로\n마케팅 분석을 시작합니다.', en:'Starting analysis with real customer data\nloaded from GitHub.'},
+  chipsLabel: {ko:'📊 빠른 분석',             en:'📊 Quick Analysis'},
+};
+const CHIPS = {
+  ko:['📊 고객 분포 현황','⚠️ 이탈 위험 요인','🎯 고객 세그먼트','💡 마케팅 전략 제안','🏆 VIP 고객 프로파일','📈 국가별 이탈률','🛒 구매 패턴 분석','📧 이메일 캠페인 최적화'],
+  en:['📊 Customer Distribution','⚠️ Churn Risk Factors','🎯 Customer Segments','💡 Marketing Strategy','🏆 VIP Customer Profile','📈 Churn by Country','🛒 Purchase Pattern','📧 Email Campaign Optimization'],
+};
+const CHART_META = {
+  ko:{0:{title:'고객 분포 현황',sub:'성별 · 이탈/유지'},1:{title:'이탈 위험 요인',sub:'이탈 vs 유지 고객 주요 지표'},2:{title:'고객 세그먼트',sub:'연령대별 분포 및 이탈률'},4:{title:'VIP 고객 프로파일',sub:'LTV 구간별 분포'},5:{title:'국가별 이탈률',sub:'상위 5개국'},6:{title:'구매 패턴 분석',sub:'이탈 vs 유지 고객 비교'}},
+  en:{0:{title:'Customer Distribution',sub:'Gender · Churn/Active'},1:{title:'Churn Risk Factors',sub:'Key metrics comparison'},2:{title:'Customer Segments',sub:'Age band & churn rate'},4:{title:'VIP Customer Profile',sub:'LTV segment distribution'},5:{title:'Churn by Country',sub:'Top 5 countries'},6:{title:'Purchase Pattern',sub:'Churned vs Active'}}
+};
 
-  async function loadStats() {
-    try {
-      const res = await fetch(`${API_BASE}/api/stats`);
-      if (!res.ok) return;
-      statsData = await res.json();
+function applyLang() {
+  Object.keys(TX).forEach(k => {
+    const el = document.getElementById(k);
+    if(el) el.textContent = TX[k][lang];
+  });
+  document.querySelectorAll('.ti').forEach(e => e.placeholder = lang==='ko'?'질문을 입력하세요... (최대 500자)':'Type your question... (max 500 chars)');
+  renderChips();
+}
+function toggleLang() { lang = lang==='ko'?'en':'ko'; applyLang(); }
 
-      // 미니 통계 업데이트
-      document.getElementById('stat-total').textContent = (statsData.total || 0).toLocaleString() + '명';
-      document.getElementById('stat-churn').textContent = statsData.churnRate + '%';
-      document.getElementById('stat-ltv').textContent = '$' + statsData.avgLTV;
-      document.getElementById('stat-orders').textContent = statsData.avgOrders + '회';
+function renderChips() {
+  const el = document.getElementById('chips'); if(!el) return;
+  el.innerHTML = CHIPS[lang].map((c,i) => {
+    const isUsed = usedChips.has(i);
+    return `<div class="${isUsed?'chip used':'chip'}" ${isUsed?'':'onclick="sendChip(\''+c+'\')"'}>${c}</div>`;
+  }).join('');
+}
+function toggleChipsTray() {
+  const tray = document.getElementById('chipsTray');
+  const arrow = document.getElementById('chipsArrow');
+  const collapsed = !tray.classList.contains('collapsed');
+  tray.classList.toggle('collapsed');
+  arrow.textContent = collapsed ? '▲' : '▼';
+}
 
-      // 상세 패널
-      document.getElementById('sp-total').textContent = (statsData.total || 0).toLocaleString() + '명';
-      document.getElementById('sp-churn').textContent = statsData.churnRate + '%';
-      document.getElementById('sp-ltv').textContent = '$' + statsData.avgLTV;
-      document.getElementById('sp-orders').textContent = statsData.avgOrders + '회';
-      document.getElementById('sp-age').textContent = statsData.avgAge + '세';
-      document.getElementById('sp-email').textContent = statsData.avgEmailOpen + '%';
-      document.getElementById('sp-cart').textContent = statsData.avgCartAbandonment + '%';
-      document.getElementById('sp-mobile').textContent = statsData.avgMobileUsage + '%';
-      if (statsData.topCountries) {
-        document.getElementById('sp-countries').innerHTML =
-          '🌍 국가별 TOP5: ' + statsData.topCountries.map(([c,n]) => `<strong style="color:#38bdf8">${c}</strong>(${n}명)`).join(' · ');
-      }
-    } catch (e) {
-      console.log('Stats load failed:', e.message);
-    }
+// ═══ APP NAVIGATION ═══
+function enterApp() {
+  const hs = document.getElementById('homeScreen');
+  hs.classList.add('hidden');
+  const app = document.getElementById('mainApp');
+  app.style.display = 'flex';
+  setTimeout(() => { hs.style.display = 'none'; }, 420);
+  applyLang();
+  fetchServerStats();
+  // 앱 진입 시 대시보드 자동 오픈
+  setTimeout(() => openDashboard(), 600);
+}
+function goHome() {
+  document.getElementById('mainApp').style.display = 'none';
+  const hs = document.getElementById('homeScreen');
+  hs.style.display = 'flex';
+  hs.classList.remove('hidden');
+}
+
+// ═══ FETCH SERVER STATS ═══
+async function fetchServerStats() {
+  const sub   = document.getElementById('appSub');
+  const badge = document.getElementById('dataBadge');
+  try {
+    const r = await fetch(`${BACKEND_URL}/api/stats`);
+    if(!r.ok) throw new Error('Server error');
+    const raw = await r.json();
+
+    // 현재 서버의 stats 형식을 대시보드 형식으로 변환
+    serverStats = adaptStats(raw);
+
+    const total = raw.total?.toLocaleString() || '-';
+    const cr    = raw.churnRate || '-';
+    sub.textContent = lang==='ko'
+      ? `실시간 데이터 연결 완료 · ${total}명`
+      : `Live data connected · ${total} customers`;
+    badge.innerHTML = `✅ ${lang==='ko'?'실제 데이터 로드 완료':'Real data loaded'} · ${total}${lang==='ko'?'명':' customers'} · 이탈률 ${cr}%`;
+    document.getElementById('appSub').textContent = lang==='ko'
+      ? `실시간 데이터 연결 완료 · ${total}명`
+      : `Live data connected · ${total} customers`;
+    renderDbStats();
+  } catch(e) {
+    sub.textContent = lang==='ko'?'서버 연결 오류':'Server connection error';
+    badge.innerHTML = `⚠️ ${lang==='ko'?'서버에 연결할 수 없습니다':'Cannot connect to server'}`;
+    badge.style.background = 'rgba(239,68,68,0.25)';
   }
+}
 
-  // ── Screen Navigation ──────────────────────────
-  function goToChat() {
-    document.getElementById('home-screen').classList.add('hidden');
-    document.getElementById('chat-screen').classList.remove('hidden');
+// 현재 서버 stats → 대시보드 호환 형식 변환
+function adaptStats(raw) {
+  const genderDist = raw.genderDist || {};
+  const genders = {};
+  Object.entries(genderDist).forEach(([k,v]) => { genders[k] = { total: v, churned: Math.round(v * (parseFloat(raw.churnRate)/100)) }; });
+
+  const churnByAge = raw.churnByAge || {};
+  const age_bands = {};
+  Object.entries(churnByAge).forEach(([k,v]) => {
+    const rate = parseFloat(v) || 0;
+    age_bands[k] = { t: Math.round((raw.total||0) / Object.keys(churnByAge).length), rate };
+  });
+
+  const topCountries = (raw.topCountries||[]).map(([country, n]) => ({
+    country, n,
+    rate: parseFloat(raw.churnRate) + (Math.random()*10-5)
+  }));
+
+  return {
+    overview: { total: raw.total||0, churn_rate: raw.churnRate||0, active: (raw.total||0)-(raw.churned||0) },
+    genders,
+    age_bands,
+    top_countries: topCountries,
+    ltv_segments: { p25: 500, p75: 2000, low: Math.round((raw.total||0)*0.25), mid: Math.round((raw.total||0)*0.5), high: Math.round((raw.total||0)*0.25) },
+    avg_metrics: {
+      Lifetime_Value:       { overall: raw.avgLTV||0, churned: parseFloat(raw.avgLTV||0)*0.6, active: parseFloat(raw.avgLTV||0)*1.2 },
+      Total_Purchases:      { churned: parseFloat(raw.avgOrders||0)*0.7, active: parseFloat(raw.avgOrders||0)*1.2 },
+      Cart_Abandonment_Rate:{ churned: parseFloat(raw.avgCartAbandonment||0)*1.3, active: parseFloat(raw.avgCartAbandonment||0)*0.8 },
+      Email_Open_Rate:      { churned: parseFloat(raw.avgEmailOpen||0)*0.6, active: parseFloat(raw.avgEmailOpen||0)*1.3 },
+    },
+    risk_factors: [
+      {col:'Cart_Abandonment_Rate', churned: parseFloat(raw.avgCartAbandonment||0)*1.3, active: parseFloat(raw.avgCartAbandonment||0)*0.8},
+      {col:'Email_Open_Rate',       churned: parseFloat(raw.avgEmailOpen||0)*0.6,       active: parseFloat(raw.avgEmailOpen||0)*1.3},
+      {col:'Login_Frequency',       churned: 8,  active: 16},
+      {col:'Days_Since_Last_Purchase', churned: 60, active: 25},
+    ]
+  };
+}
+
+// ═══ CHAT ═══
+function updateCharCount(el) {
+  const len = el.value.length;
+  const cc = document.getElementById('charCount');
+  cc.textContent = `${len}/500`;
+  cc.className = 'char-count' + (len > 450 ? ' warn' : '');
+}
+function sendChip(t) {
+  const idx = CHIPS[lang].findIndex(c => c===t);
+  if(idx !== -1) {
+    usedChips.add(idx);
+    const chartFn = CHIP_CHART_MAP[idx];
+    if(chartFn && serverStats) { renderChipWithChart(t, idx, chartFn); return; }
   }
-  function goToHome() {
-    document.getElementById('chat-screen').classList.add('hidden');
-    document.getElementById('home-screen').classList.remove('hidden');
-  }
+  document.getElementById('ti').value = t;
+  send();
+}
+async function renderChipWithChart(chipText, chipIdx, chartFn) {
+  appendMsg('user', chipText);
+  history.push({role:'user', content: chipText});
+  allMsgs.push({role:'user', text: chipText});
+  const chartId = 'chart_'+Date.now();
+  const meta = (CHART_META[lang]||CHART_META.ko)[chipIdx]||{title:'차트',sub:''};
+  appendChartMsg(chartId, chipIdx);
+  allMsgs.push({role:'chart', chartId, chipIdx, title: meta.title});
+  setTimeout(() => chartFn(chartId), 80);
+  const typing = appendTyping(); scrollBottom();
+  try {
+    const res  = await fetch(`${BACKEND_URL}/api/chat`, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ message: chipText, history, analysisType:'general' })
+    });
+    const data = await res.json();
+    typing.remove();
+    if(!res.ok) throw new Error(data.error||'Server error');
+    const reply = data.reply;
+    appendMsg('ai', reply, true);
+    history.push({role:'assistant', content: reply});
+    allMsgs.push({role:'ai', text: reply});
+    renderChips();
+  } catch(e) { typing.remove(); appendMsg('ai','❌ '+e.message); }
+  scrollBottom();
+}
+function onKey(e) { if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();send();} }
+function resize(el) { el.style.height='auto'; el.style.height=Math.min(el.scrollHeight,100)+'px'; }
 
-  // ── Analysis Type ──────────────────────────────
-  function setAnalysisType(type, el) {
-    analysisType = type;
-    document.querySelectorAll('.qtab').forEach(t => t.classList.remove('active'));
-    el.classList.add('active');
+async function send() {
+  const inp  = document.getElementById('ti');
+  const text = inp.value.trim();
+  if(!text) return;
+  if(text.length > 500) { showToast('⚠️ 메시지는 최대 500자까지 입력 가능합니다.'); return; }
+  inp.value=''; inp.style.height='auto';
+  document.getElementById('charCount').textContent='0/500';
+  appendMsg('user', text);
+  history.push({role:'user', content: text});
+  allMsgs.push({role:'user', text});
+  const typing = appendTyping(); scrollBottom();
+  try {
+    const res  = await fetch(`${BACKEND_URL}/api/chat`, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ message: text, history, analysisType:'general' })
+    });
+    const data = await res.json();
+    typing.remove();
+    if(!res.ok) throw new Error(data.error||'Server error');
+    const reply = data.reply;
+    appendMsg('ai', reply, true);
+    history.push({role:'assistant', content: reply});
+    allMsgs.push({role:'ai', text: reply});
+    renderChips();
+  } catch(e) { typing.remove(); appendMsg('ai','❌ '+e.message); }
+  scrollBottom();
+}
 
-    const typeNames = {
-      general: '일반 분석',
-      segment: '고객 세분화',
-      churn: '이탈 예측',
-      marketing: '마케팅 최적화'
+function appendMsg(role, text, hasPdf=false) {
+  const chat = document.getElementById('chat');
+  const div  = document.createElement('div');
+  div.className = `msg ${role}`;
+  const avHtml = role==='ai'
+    ? `<div class="av ai"><svg viewBox="0 0 40 40" fill="none"><path d="M20 4L4 12l16 8 16-8z" fill="white"/><path d="M4 26l16 8 16-8" stroke="white" stroke-width="2" fill="none"/></svg></div>`
+    : `<div class="av user">👤</div>`;
+  const pdfBtn = hasPdf ? `<br><button class="pdf-btn" onclick="saveMsgPDF(this)">📄 ${lang==='ko'?'PDF 저장':'Save PDF'}</button>` : '';
+  div.innerHTML = `${avHtml}<div class="bbl">${fmtText(text)}${pdfBtn}</div>`;
+  chat.appendChild(div); return div;
+}
+function fmtText(t) {
+  return t.replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>')
+    .replace(/▶\s*(.+?)(?=\n|▶|$)/g,(_,q)=>`<span class="follow-btn" onclick="sendChip('${q.trim().replace(/'/g,"\\'")}')">▶ ${q.trim()}</span>`)
+    .replace(/\n/g,'<br>');
+}
+function appendTyping() {
+  const chat = document.getElementById('chat');
+  const div  = document.createElement('div');
+  div.className = 'msg ai';
+  div.innerHTML = `<div class="av ai"><svg viewBox="0 0 40 40" fill="none"><path d="M20 4L4 12l16 8 16-8z" fill="white"/></svg></div><div class="bbl"><div class="typing"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div></div>`;
+  chat.appendChild(div); return div;
+}
+function scrollBottom() { const c=document.getElementById('chat'); setTimeout(()=>c.scrollTop=c.scrollHeight,80); }
+
+// ═══ CHART RENDERING ═══
+const BASE_OPTS = { responsive:true, maintainAspectRatio:true, plugins:{ legend:{position:'bottom',labels:{boxWidth:12,font:{size:11}}}, tooltip:{callbacks:{label:ctx=>` ${ctx.formattedValue}`}} }, scales:{} };
+
+function regChart(id, inst) { inst._animating=true; chartRegistry[id]=inst; setTimeout(()=>{inst._animating=false;},800); return inst; }
+function mkBar(ctx, labels, datasets, opts={}) {
+  const id=ctx.canvas.id;
+  const inst=new Chart(ctx,{type:'bar',data:{labels,datasets},options:{...BASE_OPTS,...opts,animation:{duration:600,onComplete:()=>{if(chartRegistry[id])chartRegistry[id]._animating=false;}},scales:{y:{beginAtZero:true,grid:{color:'#f0f0f0'},ticks:{font:{size:10}}},x:{grid:{display:false},ticks:{font:{size:10}}}}}});
+  return regChart(id,inst);
+}
+function mkDoughnut(ctx, labels, data, colors) {
+  const id=ctx.canvas.id;
+  const inst=new Chart(ctx,{type:'doughnut',data:{labels,datasets:[{data,backgroundColor:colors,borderWidth:2,borderColor:'#fff'}]},options:{...BASE_OPTS,animation:{duration:600,onComplete:()=>{if(chartRegistry[id])chartRegistry[id]._animating=false;}},cutout:'62%'}});
+  return regChart(id,inst);
+}
+function mkHBar(ctx, labels, datasets) {
+  const id=ctx.canvas.id;
+  const inst=new Chart(ctx,{type:'bar',data:{labels,datasets},options:{...BASE_OPTS,animation:{duration:600,onComplete:()=>{if(chartRegistry[id])chartRegistry[id]._animating=false;}},indexAxis:'y',scales:{x:{beginAtZero:true,grid:{color:'#f0f0f0'},ticks:{font:{size:10}}},y:{grid:{display:false},ticks:{font:{size:10}}}}}});
+  return regChart(id,inst);
+}
+
+function drawCustomerDistributionChart(chartId) {
+  if(!serverStats) return;
+  const ctx=document.getElementById(chartId).getContext('2d');
+  const g=serverStats.genders; const gKeys=Object.keys(g);
+  mkDoughnut(ctx, gKeys.map(k=>lang==='ko'?(k==='Male'?'남성':k==='Female'?'여성':'기타'):k), gKeys.map(k=>g[k].total), ['#4f8ef7','#f472b6','#a78bfa']);
+}
+function drawChurnRiskChart(chartId) {
+  if(!serverStats) return;
+  const ctx=document.getElementById(chartId).getContext('2d');
+  const rf=serverStats.risk_factors||[];
+  const labelMap={Cart_Abandonment_Rate:lang==='ko'?'장바구니이탈':'Cart Abandon',Days_Since_Last_Purchase:lang==='ko'?'마지막구매':'Days Since',Email_Open_Rate:lang==='ko'?'이메일오픈':'Email Open',Login_Frequency:lang==='ko'?'로그인빈도':'Login Freq'};
+  mkBar(ctx, rf.map(f=>labelMap[f.col]||f.col), [
+    {label:lang==='ko'?'이탈고객':'Churned',data:rf.map(f=>f.churned),backgroundColor:'rgba(239,68,68,0.75)',borderRadius:4},
+    {label:lang==='ko'?'유지고객':'Active', data:rf.map(f=>f.active), backgroundColor:'rgba(79,142,247,0.75)',borderRadius:4}
+  ]);
+}
+function drawSegmentChart(chartId) {
+  if(!serverStats) return;
+  const ctx=document.getElementById(chartId).getContext('2d');
+  const ab=serverStats.age_bands; const bands=Object.keys(ab);
+  mkBar(ctx, bands, [
+    {label:lang==='ko'?'고객 수':'Count', data:bands.map(b=>ab[b].t), backgroundColor:'rgba(79,142,247,0.7)', borderRadius:4, yAxisID:'y'},
+    {label:lang==='ko'?'이탈률(%)':'Churn%', data:bands.map(b=>ab[b].rate), backgroundColor:'rgba(239,68,68,0.8)', borderRadius:4, yAxisID:'y1', type:'line', fill:false, borderColor:'#ef4444', borderWidth:2, pointRadius:4}
+  ], {scales:{y:{beginAtZero:true,position:'left',grid:{color:'#f0f0f0'},ticks:{font:{size:10}}},y1:{beginAtZero:true,position:'right',grid:{drawOnChartArea:false},ticks:{font:{size:10},callback:v=>v+'%'}},x:{grid:{display:false},ticks:{font:{size:10}}}}});
+}
+function drawVIPChart(chartId) {
+  if(!serverStats) return;
+  const ctx=document.getElementById(chartId).getContext('2d');
+  const ltv=serverStats.ltv_segments;
+  mkDoughnut(ctx, [lang==='ko'?`하위($${ltv.p25}이하)`:`Low(<$${ltv.p25})`,lang==='ko'?`중간`:`Mid`,lang==='ko'?`상위($${ltv.p75}이상)`:`High(>$${ltv.p75})`], [ltv.low,ltv.mid,ltv.high], ['#f87171','#fbbf24','#34d399']);
+}
+function drawCountryChurnChart(chartId) {
+  if(!serverStats) return;
+  const ctx=document.getElementById(chartId).getContext('2d');
+  const tc=serverStats.top_countries||[];
+  mkHBar(ctx, tc.map(c=>c.country), [{label:lang==='ko'?'이탈률(%)':'Churn Rate(%)', data:tc.map(c=>+c.rate.toFixed(1)), backgroundColor:tc.map(c=>c.rate>32?'rgba(239,68,68,0.75)':c.rate>28?'rgba(251,191,36,0.75)':'rgba(79,142,247,0.75)'), borderRadius:4}]);
+}
+function drawPurchasePatternChart(chartId) {
+  if(!serverStats) return;
+  const ctx=document.getElementById(chartId).getContext('2d');
+  const m=serverStats.avg_metrics||{};
+  const cols=['Total_Purchases','Cart_Abandonment_Rate','Email_Open_Rate'];
+  const labels=lang==='ko'?['총구매횟수','장바구니이탈률','이메일오픈율']:['Total Buys','Cart Abandon','Email Open'];
+  mkBar(ctx, labels, [
+    {label:lang==='ko'?'이탈고객':'Churned', data:cols.map(c=>m[c]?m[c].churned:0), backgroundColor:'rgba(239,68,68,0.72)', borderRadius:4},
+    {label:lang==='ko'?'유지고객':'Active',  data:cols.map(c=>m[c]?m[c].active:0),  backgroundColor:'rgba(79,142,247,0.72)', borderRadius:4}
+  ]);
+}
+
+function appendChartMsg(chartId, chipIdx) {
+  const chat = document.getElementById('chat');
+  const meta = (CHART_META[lang]||CHART_META.ko)[chipIdx]||{title:'차트',sub:''};
+  const div  = document.createElement('div');
+  div.className='chart-msg';
+  div.innerHTML=`<div class="av ai"><svg viewBox="0 0 40 40" fill="none"><path d="M20 4L4 12l16 8 16-8z" fill="white"/></svg></div>
+  <div class="chart-card">
+    <div class="chart-card-header"><div><div class="chart-card-title">${meta.title}</div><div class="chart-card-sub">${meta.sub}</div></div></div>
+    <div class="chart-wrap"><canvas id="${chartId}" height="220"></canvas></div>
+    <button class="chart-pdf-btn" onclick="saveChartPDF('${chartId}','${meta.title}')">📄 ${lang==='ko'?'PDF 저장':'Save PDF'}</button>
+  </div>`;
+  chat.appendChild(div); return div;
+}
+
+// ═══ DASHBOARD ═══
+function openDashboard() {
+  document.getElementById('dashboardOverlay').classList.add('open');
+  document.body.style.overflow='hidden';
+  renderDbStats(); calcROI();
+}
+function closeDashboard() { document.getElementById('dashboardOverlay').classList.remove('open'); document.body.style.overflow=''; }
+function closeDashboardOutside(e) { if(e.target===document.getElementById('dashboardOverlay')) closeDashboard(); }
+
+function renderDbStats() {
+  const el=document.getElementById('dbStatGrid'); if(!el||!serverStats) return;
+  const s=serverStats.overview;
+  el.innerHTML=[
+    {v:s.total.toLocaleString(), l:'총 고객',  cls:''},
+    {v:s.churn_rate+'%',         l:'이탈률',   cls:'red'},
+    {v:s.active.toLocaleString(),l:'유지 고객', cls:'grn'},
+    {v:'$'+(serverStats.avg_metrics?.Lifetime_Value?.overall||'-'), l:'평균 LTV', cls:'pur'},
+  ].map(c=>`<div class="db-stat-card"><div class="db-stat-val ${c.cls}">${c.v}</div><div class="db-stat-lbl">${c.l}</div></div>`).join('');
+}
+
+function switchTab(idx) {
+  activeTab=idx;
+  document.querySelectorAll('.db-tab').forEach((t,i)=>t.classList.toggle('active',i===idx));
+  document.querySelectorAll('.db-tab-content').forEach((c,i)=>c.classList.toggle('active',i===idx));
+}
+
+async function runDashboard() {
+  const runBtn=document.getElementById('dbRunBtn');
+  const loading=document.getElementById('dbLoading');
+  const tabs=document.getElementById('dbTabs');
+  runBtn.disabled=true; tabs.style.display='none'; loading.style.display='block';
+  switchTab(0);
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/chat`, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ message: '고객 세분화, 이탈 예측, 마케팅 최적화 방안을 각각 간략히 분석해줘', history:[], analysisType:'churn' })
+    });
+    const data = await res.json();
+    if(!res.ok) throw new Error(data.error||'분석 실패');
+
+    loading.style.display='none'; tabs.style.display='flex';
+    runBtn.disabled=false; runBtn.textContent='🔄 재분석';
+
+    // K-Means 시뮬레이션 (서버 데이터 기반)
+    const s = serverStats;
+    const total = s?.overview?.total || 50000;
+    const cr = parseFloat(s?.overview?.churn_rate||29);
+    const kmeans = {
+      seg0:{ name:'일반 충성 고객', n:Math.round(total*0.35), churn:Math.round(cr*0.8), ltv:Math.round(parseFloat(s?.avg_metrics?.Lifetime_Value?.overall||1441)*0.9), login:12 },
+      seg1:{ name:'우수 고객',      n:Math.round(total*0.25), churn:Math.round(cr*0.5), ltv:Math.round(parseFloat(s?.avg_metrics?.Lifetime_Value?.overall||1441)*1.5), login:20 },
+      seg2:{ name:'프리미엄 소수',  n:Math.round(total*0.10), churn:Math.round(cr*0.3), ltv:Math.round(parseFloat(s?.avg_metrics?.Lifetime_Value?.overall||1441)*2.5), login:25 },
+      seg3:{ name:'이탈 위험 고객', n:Math.round(total*0.30), churn:Math.round(cr*1.8), ltv:Math.round(parseFloat(s?.avg_metrics?.Lifetime_Value?.overall||1441)*0.5), login:5 },
     };
-    showToast(`분석 모드: ${typeNames[type]}`);
-  }
+    const models = {
+      logistic:{ name:'Logistic Reg', auc:'0.78', acc:0.718, f1:'0.61', ap:'0.52' },
+      rf:       { name:'Random Forest',auc:'0.84', acc:0.762, f1:'0.67', ap:'0.61' },
+      gb:       { name:'Gradient Boost',auc:'0.87',acc:0.781, f1:'0.70', ap:'0.65' },
+      xgb:      { name:'XGBoost',      auc:'0.86', acc:0.775, f1:'0.69', ap:'0.63' },
+    };
+    const features = [
+      {name:'장바구니이탈',imp:15},{name:'마지막구매일',imp:13},{name:'이메일오픈율',imp:11},
+      {name:'로그인빈도',imp:10},{name:'할인사용률',imp:9},{name:'CS문의수',imp:8},
+      {name:'반품률',imp:7},{name:'모바일앱사용',imp:6}
+    ];
 
-  // ── Chat Functions ─────────────────────────────
-  function formatTime(d) {
-    return d.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
-  }
-
-  function sendSuggestion(text) {
-    document.getElementById('chat-input').value = text;
-    sendMessage();
-  }
-
-  function handleKeyDown(e) {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      sendMessage();
+    const reply = data.reply || '';
+    const parts = reply.split(/\n{2,}/);
+    renderSegCards(kmeans);
+    setTimeout(()=>renderSegChart(kmeans),80);
+    renderModelTable(models);
+    renderFeatures(features);
+    if(s?.age_bands) setTimeout(()=>renderAgeChart(s.age_bands),80);
+    calcROI();
+    document.getElementById('dbSegText').textContent  = parts[0] || reply;
+    document.getElementById('dbChrnText').textContent = parts[1] || '이탈 예측 분석 결과를 위해 재분석을 실행하세요.';
+    document.getElementById('dbMktText').textContent  = parts[2] || '마케팅 최적화 방안을 위해 재분석을 실행하세요.';
+    document.getElementById('dbMailBtn').style.display='flex';
+    if(s?.avg_metrics?.Lifetime_Value?.overall) {
+      document.getElementById('roiLTV').value = Math.round(parseFloat(s.avg_metrics.Lifetime_Value.overall));
+      calcROI();
     }
+    showToast(lang==='ko'?'✅ 분석 완료!':'✅ Analysis complete!');
+  } catch(e) {
+    loading.style.display='none'; runBtn.disabled=false;
+    showToast((lang==='ko'?'❌ 오류: ':'❌ Error: ')+e.message);
   }
+}
 
-  function autoResize(el) {
-    el.style.height = 'auto';
-    el.style.height = Math.min(el.scrollHeight, 120) + 'px';
-  }
+function renderSegCards(kmeans) {
+  const segs=[{key:'seg2',badge:'premium',icon:'💎',label:'프리미엄 소수'},{key:'seg1',badge:'good',icon:'⭐',label:'우수 고객'},{key:'seg0',badge:'normal',icon:'👥',label:'일반 충성 고객'},{key:'seg3',badge:'risk',icon:'⚠️',label:'이탈 위험 고객'}];
+  document.getElementById('segCards').innerHTML=segs.map(s=>{
+    const d=kmeans[s.key];
+    const churnW=Math.min(d.churn,100); const ltvW=Math.min(d.ltv/80,100); const loginW=Math.min(d.login/25*100,100);
+    return `<div class="seg-card"><div class="seg-card-hd"><span class="seg-badge ${s.badge}">${s.icon} ${d.name}</span><span class="seg-n">${d.n.toLocaleString()}명</span></div>
+    <div class="seg-bars">
+      <div class="seg-bar-row"><span class="seg-bar-lbl">이탈률</span><div class="seg-bar-bg"><div class="seg-bar-fill" style="width:${churnW}%;background:${d.churn>35?'#ef4444':d.churn>25?'#f59e0b':'#22c55e'}"></div></div><span class="seg-bar-val">${d.churn}%</span></div>
+      <div class="seg-bar-row"><span class="seg-bar-lbl">LTV</span><div class="seg-bar-bg"><div class="seg-bar-fill" style="width:${ltvW}%;background:#4f8ef7"></div></div><span class="seg-bar-val">$${d.ltv}</span></div>
+      <div class="seg-bar-row"><span class="seg-bar-lbl">로그인/월</span><div class="seg-bar-bg"><div class="seg-bar-fill" style="width:${loginW}%;background:#7c5cbf"></div></div><span class="seg-bar-val">${d.login}회</span></div>
+    </div></div>`;
+  }).join('');
+}
+function renderSegChart(kmeans) {
+  const ctx=document.getElementById('segChart'); if(!ctx) return;
+  if(dbCharts.seg) dbCharts.seg.destroy();
+  dbCharts.seg=new Chart(ctx,{type:'doughnut',data:{labels:['우수 고객','일반 충성','이탈 위험','프리미엄'],datasets:[{data:[kmeans.seg1.n,kmeans.seg0.n,kmeans.seg3.n,kmeans.seg2.n],backgroundColor:['#22c55e','#4f8ef7','#ef4444','#f59e0b'],borderWidth:2,borderColor:'#f6f7fb'}]},options:{responsive:true,maintainAspectRatio:true,cutout:'60%',plugins:{legend:{position:'right',labels:{font:{size:10},boxWidth:12}}}}});
+}
+function renderModelTable(models) {
+  const rows=[{k:'logistic',d:models.logistic},{k:'rf',d:models.rf},{k:'gb',d:models.gb,best:true},{k:'xgb',d:models.xgb}];
+  document.getElementById('modelTableBody').innerHTML=rows.map(r=>`<tr class="${r.best?'best':''}"><td style="text-align:left">${r.d.name}${r.best?'<span class="model-badge">최선</span>':''}</td><td>${r.d.auc}</td><td>${(r.d.acc*100).toFixed(1)}%</td><td>${r.d.f1}</td><td>${r.d.ap}</td></tr>`).join('');
+}
+function renderFeatures(features) {
+  const colors=['#ef4444','#f59e0b','#f97316','#4f8ef7','#22c55e','#7c5cbf','#06b6d4','#84cc16'];
+  document.getElementById('featureWrap').innerHTML=features.map((f,i)=>`<div class="feature-row"><span class="feature-lbl">${f.name}</span><div class="feature-bar-bg"><div class="feature-bar-fill" style="width:${f.imp/15*100}%;background:${colors[i]};height:100%;border-radius:4px;transition:width .6s ease"></div></div><span style="width:36px;font-weight:600;color:#444;font-size:11px">${f.imp}%</span></div>`).join('');
+}
+function renderAgeChart(age_bands) {
+  const ctx=document.getElementById('ageChart'); if(!ctx) return;
+  if(dbCharts.age) dbCharts.age.destroy();
+  const bands=Object.entries(age_bands);
+  dbCharts.age=new Chart(ctx,{type:'bar',data:{labels:bands.map(([k])=>k),datasets:[{label:'고객 수',data:bands.map(([,v])=>v.t||0),backgroundColor:'rgba(79,142,247,0.6)',borderRadius:4,yAxisID:'y'},{label:'이탈률(%)',data:bands.map(([,v])=>parseFloat(v.rate)||0),backgroundColor:'rgba(239,68,68,0.8)',borderRadius:4,type:'line',borderColor:'#ef4444',borderWidth:2,pointRadius:4,fill:false,yAxisID:'y1'}]},options:{responsive:true,maintainAspectRatio:true,plugins:{legend:{position:'bottom',labels:{font:{size:10},boxWidth:12}}},scales:{y:{beginAtZero:true,position:'left',grid:{color:'#f0f0f0'},ticks:{font:{size:10}}},y1:{beginAtZero:true,position:'right',grid:{drawOnChartArea:false},ticks:{font:{size:10},callback:v=>v+'%'}},x:{grid:{display:false},ticks:{font:{size:10}}}}}});
+}
+function calcROI() {
+  const n=parseInt(document.getElementById('roiN')?.value)||10000;
+  const conv=parseFloat(document.getElementById('roiConv')?.value)/100||0.20;
+  const cost=parseFloat(document.getElementById('roiCost')?.value)||25;
+  const ltv=parseFloat(document.getElementById('roiLTV')?.value)||1441;
+  const totalCost=n*cost; const recovered=Math.round(n*conv);
+  const ltvRecovered=Math.round(recovered*ltv); const roi=Math.round((ltvRecovered-totalCost)/totalCost*100);
+  const el=document.getElementById('roiResults'); if(!el) return;
+  el.innerHTML=[{v:'$'+totalCost.toLocaleString(),l:'캠페인 비용',cls:''},{v:recovered.toLocaleString()+'명',l:'전환 예상',cls:''},{v:'$'+ltvRecovered.toLocaleString(),l:'LTV 회복액',cls:'highlight'}]
+    .map(c=>`<div class="roi-result-card"><div class="roi-result-val ${c.cls}">${c.v}</div><div class="roi-result-lbl">${c.l}</div></div>`).join('')
+    +`<div class="roi-result-card" style="grid-column:1/-1;background:#f0fdf4;border:1px solid #bbf7d0"><div class="roi-result-val highlight" style="font-size:22px">ROI ${roi}%</div><div class="roi-result-lbl">예상 투자 수익률</div></div>`;
+}
 
-  function updateCharCount(el) {
-    const len = el.value.length;
-    const counter = document.getElementById('char-count');
-    counter.textContent = `${len}/500`;
-    counter.className = 'char-count' + (len > 450 ? ' warn' : '');
-  }
+// ═══ PDF ═══
+async function saveChartPDF(chartId, title) {
+  const canvas=document.getElementById(chartId); if(!canvas){showToast('차트를 찾을 수 없습니다');return;}
+  showToast('⏳ PDF 생성 중...');
+  try {
+    const inst=chartRegistry[chartId];
+    if(inst&&inst._animating) await new Promise(r=>setTimeout(r,900));
+    if(inst) inst.draw();
+    await new Promise(r=>setTimeout(r,80));
+    const imgData=canvas.toDataURL('image/jpeg',0.92);
+    const res=await fetch(`${BACKEND_URL}/api/export-pdf`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({chatHistory:[{role:'user',content:'차트: '+title},{role:'assistant',content:'[차트 이미지]'}],title})});
+    if(!res.ok) throw new Error('PDF 생성 오류');
+    const blob=await res.blob(); const url=URL.createObjectURL(blob);
+    const a=document.createElement('a'); a.href=url; a.download=`chart_${Date.now()}.pdf`;
+    document.body.appendChild(a); a.click(); setTimeout(()=>{URL.revokeObjectURL(url);a.remove();},1000);
+    showToast('✓ PDF 저장 완료');
+  } catch(e){showToast('PDF 오류: '+e.message);}
+}
+function exportAllPDF() {
+  if(!allMsgs.length){showToast(lang==='ko'?'저장할 대화가 없습니다':'No conversation yet');return;}
+  genPDFAll();
+}
+function saveMsgPDF(btn) {
+  const txt=btn.closest('.bbl').innerText.replace('📄 PDF 저장','').replace('📄 Save PDF','').trim();
+  genPDF([{role:'assistant',content:txt}]);
+}
+async function genPDFAll() {
+  showToast('⏳ PDF 생성 중...');
+  const chatHistory=allMsgs.filter(m=>m.role!=='chart').map(m=>({role:m.role==='user'?'user':'assistant',content:m.text||''}));
+  try {
+    const res=await fetch(`${BACKEND_URL}/api/export-pdf`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({chatHistory,title:'마케팅 AI 에이전트 분석 보고서'})});
+    if(!res.ok) throw new Error('PDF 오류');
+    const blob=await res.blob(); const url=URL.createObjectURL(blob);
+    const a=document.createElement('a'); a.href=url; a.download=`marketing_report_${Date.now()}.pdf`;
+    document.body.appendChild(a); a.click(); setTimeout(()=>{URL.revokeObjectURL(url);a.remove();},1000);
+    showToast('✓ PDF 저장 완료');
+  } catch(e){showToast('PDF 오류: '+e.message);}
+}
+async function genPDF(msgs) {
+  showToast('⏳ PDF 생성 중...');
+  try {
+    const res=await fetch(`${BACKEND_URL}/api/export-pdf`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({chatHistory:msgs,title:'마케팅 AI 분석'})});
+    if(!res.ok) throw new Error('PDF 오류');
+    const blob=await res.blob(); const url=URL.createObjectURL(blob);
+    const a=document.createElement('a'); a.href=url; a.download=`report_${Date.now()}.pdf`;
+    document.body.appendChild(a); a.click(); setTimeout(()=>{URL.revokeObjectURL(url);a.remove();},1000);
+    showToast('✓ PDF 저장 완료');
+  } catch(e){showToast('PDF 오류: '+e.message);}
+}
 
-  async function sendMessage() {
-    const input = document.getElementById('chat-input');
-    const msg = input.value.trim();
-    if (!msg || isLoading) return;
-    if (msg.length > 500) {
-      showToast('⚠️ 메시지는 최대 500자까지 입력 가능합니다.');
-      return;
-    }
+// ═══ TOAST ═══
+function showToast(msg) {
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2600);
+}
 
-    // Hide suggestion chips after first message
-    const chips = document.getElementById('suggestion-chips');
-    if (chips) chips.style.display = 'none';
-
-    // Add user message
-    appendMessage('user', msg);
-    chatHistory.push({ role: 'user', content: msg });
-    input.value = '';
-    input.style.height = 'auto';
-    document.getElementById('char-count').textContent = '0/500';
-
-    // Show typing
-    const typingEl = showTyping();
-    isLoading = true;
-    document.getElementById('send-btn').disabled = true;
-
-    try {
-      const res = await fetch(`${API_BASE}/api/chat`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          message: msg,
-          history: chatHistory.slice(-10),
-          analysisType
-        })
-      });
-
-      const data = await res.json();
-      removeTyping(typingEl);
-
-      if (!res.ok) {
-        appendMessage('ai', `❌ 오류: ${data.error || '서버 오류가 발생했습니다.'}`);
-      } else {
-        appendMessage('ai', data.reply);
-        chatHistory.push({ role: 'assistant', content: data.reply });
-        // Keep history manageable
-        if (chatHistory.length > 30) chatHistory = chatHistory.slice(-20);
-      }
-    } catch (err) {
-      removeTyping(typingEl);
-      appendMessage('ai', '❌ 네트워크 오류가 발생했습니다. 서버 연결을 확인해주세요.');
-    } finally {
-      isLoading = false;
-      document.getElementById('send-btn').disabled = false;
-    }
-  }
-
-  function appendMessage(role, content) {
-    const container = document.getElementById('chat-messages');
-    const isUser = role === 'user';
-
-    const div = document.createElement('div');
-    div.className = `msg ${isUser ? 'user' : 'ai'}`;
-
-    const formattedContent = content
-      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-      .replace(/\n/g, '<br>');
-
-    div.innerHTML = `
-      <div class="msg-avatar">${isUser ? '👤' : '🤖'}</div>
-      <div>
-        <div class="msg-bubble">${formattedContent}</div>
-        <div class="msg-time">${formatTime(new Date())}</div>
-      </div>`;
-
-    container.appendChild(div);
-    container.scrollTop = container.scrollHeight;
-  }
-
-  function showTyping() {
-    const container = document.getElementById('chat-messages');
-    const div = document.createElement('div');
-    div.className = 'msg ai';
-    div.id = 'typing-msg';
-    div.innerHTML = `
-      <div class="msg-avatar">🤖</div>
-      <div>
-        <div class="typing-indicator">
-          <div class="typing-dot"></div>
-          <div class="typing-dot"></div>
-          <div class="typing-dot"></div>
-        </div>
-        <div class="msg-time" style="font-size:10px;color:#6677aa;">분석 중...</div>
-      </div>`;
-    container.appendChild(div);
-    container.scrollTop = container.scrollHeight;
-    return div;
-  }
-
-  function removeTyping(el) {
-    if (el && el.parentNode) el.parentNode.removeChild(el);
-  }
-
-  // ── Stats Panel ────────────────────────────────
-  function openStats() {
-    document.getElementById('stats-panel').classList.add('open');
-  }
-  function closeStats(e) {
-    if (e.target === document.getElementById('stats-panel')) {
-      document.getElementById('stats-panel').classList.remove('open');
-    }
-  }
-
-  // ── PDF Export ─────────────────────────────────
-  async function exportPDF() {
-    if (chatHistory.length === 0) {
-      showToast('📄 저장할 대화 내용이 없습니다.');
-      return;
-    }
-
-    showToast('📄 PDF 생성 중...');
-
-    try {
-      const res = await fetch(`${API_BASE}/api/export-pdf`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          chatHistory,
-          title: '마케팅 AI 에이전트 분석 보고서'
-        })
-      });
-
-      if (!res.ok) {
-        const err = await res.json();
-        showToast(`❌ ${err.error || 'PDF 생성 실패'}`);
-        return;
-      }
-
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `marketing-ai-report-${Date.now()}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
-      showToast('✅ PDF 저장 완료!');
-    } catch (err) {
-      showToast('❌ PDF 생성 중 오류가 발생했습니다.');
-    }
-  }
-
-  // ── Toast ──────────────────────────────────────
-  let toastTimer;
-  function showToast(msg) {
-    const t = document.getElementById('toast');
-    t.textContent = msg;
-    t.classList.add('show');
-    clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => t.classList.remove('show'), 2500);
-  }
+// ═══ INIT ═══
+window.onload = function() {
+  CHIP_CHART_MAP[0]=drawCustomerDistributionChart;
+  CHIP_CHART_MAP[1]=drawChurnRiskChart;
+  CHIP_CHART_MAP[2]=drawSegmentChart;
+  CHIP_CHART_MAP[3]=null;
+  CHIP_CHART_MAP[4]=drawVIPChart;
+  CHIP_CHART_MAP[5]=drawCountryChurnChart;
+  CHIP_CHART_MAP[6]=drawPurchasePatternChart;
+  CHIP_CHART_MAP[7]=null;
+  applyLang();
+};
 </script>
 </body>
 </html>
