@@ -350,7 +350,7 @@
     </button>
     <div class="db-loading" id="dbLoading" style="display:none">
       <div class="db-spinner"></div>
-      <div class="db-loading-txt">AI가 3개 섹션을 동시 분석 중입니다...<br><small>약 20~40초 소요됩니다</small></div>
+      <div class="db-loading-txt" id="dbLoadingMsg">AI가 3개 섹션을 순차 분석 중입니다...<br><small>고객분석 → 이탈예측 → 마케팅 순서로 각각 표시됩니다</small></div>
     </div>
     <div class="db-tabs" id="dbTabs" style="display:none">
       <button class="db-tab active" onclick="switchTab(0)">🎯 고객분석</button>
@@ -803,65 +803,123 @@ function switchTab(idx) {
   document.querySelectorAll('.db-tab-content').forEach((c,i)=>c.classList.toggle('active',i===idx));
 }
 
+// 탭별 로딩 텍스트 업데이트
+function setDbText(id, text) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.textContent = text;
+}
+
+// AI API 단건 호출 헬퍼
+async function callChat(message, analysisType) {
+  const res = await fetch(`${BACKEND_URL}/api/chat`, {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ message, history: [], analysisType })
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || '분석 실패');
+  return data.reply || '';
+}
+
 async function runDashboard() {
-  const runBtn=document.getElementById('dbRunBtn');
-  const loading=document.getElementById('dbLoading');
-  const tabs=document.getElementById('dbTabs');
-  runBtn.disabled=true; tabs.style.display='none'; loading.style.display='block';
+  const runBtn  = document.getElementById('dbRunBtn');
+  const loading = document.getElementById('dbLoading');
+  const loadMsg = document.getElementById('dbLoadingMsg');
+  const tabs    = document.getElementById('dbTabs');
+  runBtn.disabled = true;
+  tabs.style.display = 'none';
+  loading.style.display = 'block';
   switchTab(0);
+
+  // 분석 텍스트 초기화
+  setDbText('dbSegText',  '🔄 고객 세분화 분석 중...');
+  setDbText('dbChrnText', '🔄 이탈 예측 분석 중...');
+  setDbText('dbMktText',  '🔄 마케팅 최적화 분석 중...');
+
+  const s     = serverStats;
+  const total = s?.overview?.total || 50000;
+  const cr    = parseFloat(s?.overview?.churn_rate || 29);
+  const ltv   = parseFloat(s?.avg_metrics?.Lifetime_Value?.overall || 1441);
+
+  // K-Means 세그먼트 데이터
+  const kmeans = {
+    seg0:{ name:'일반 충성 고객', n:Math.round(total*0.35), churn:Math.round(cr*0.8),  ltv:Math.round(ltv*0.9),  login:12 },
+    seg1:{ name:'우수 고객',      n:Math.round(total*0.25), churn:Math.round(cr*0.5),  ltv:Math.round(ltv*1.5),  login:20 },
+    seg2:{ name:'프리미엄 소수',  n:Math.round(total*0.10), churn:Math.round(cr*0.3),  ltv:Math.round(ltv*2.5),  login:25 },
+    seg3:{ name:'이탈 위험 고객', n:Math.round(total*0.30), churn:Math.round(cr*1.8),  ltv:Math.round(ltv*0.5),  login:5  },
+  };
+  const models = {
+    logistic:{ name:'Logistic Reg',   auc:'0.78', acc:0.718, f1:'0.61', ap:'0.52' },
+    rf:       { name:'Random Forest', auc:'0.84', acc:0.762, f1:'0.67', ap:'0.61' },
+    gb:       { name:'Gradient Boost',auc:'0.87', acc:0.781, f1:'0.70', ap:'0.65' },
+    xgb:      { name:'XGBoost',       auc:'0.86', acc:0.775, f1:'0.69', ap:'0.63' },
+  };
+  const features = [
+    {name:'장바구니이탈',imp:15},{name:'마지막구매일',imp:13},{name:'이메일오픈율',imp:11},
+    {name:'로그인빈도',imp:10},{name:'할인사용률',imp:9},{name:'CS문의수',imp:8},
+    {name:'반품률',imp:7},{name:'모바일앱사용',imp:6}
+  ];
+
   try {
-    const res = await fetch(`${BACKEND_URL}/api/chat`, {
-      method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ message: '고객 세분화, 이탈 예측, 마케팅 최적화 방안을 각각 간략히 분석해줘', history:[], analysisType:'churn' })
-    });
-    const data = await res.json();
-    if(!res.ok) throw new Error(data.error||'분석 실패');
+    // ── 탭 UI 먼저 표시 (분석 텍스트는 로딩 중 상태로) ──
+    loading.style.display = 'none';
+    tabs.style.display    = 'flex';
+    runBtn.disabled       = false;
+    runBtn.textContent    = '🔄 재분석';
 
-    loading.style.display='none'; tabs.style.display='flex';
-    runBtn.disabled=false; runBtn.textContent='🔄 재분석';
-
-    // K-Means 시뮬레이션 (서버 데이터 기반)
-    const s = serverStats;
-    const total = s?.overview?.total || 50000;
-    const cr = parseFloat(s?.overview?.churn_rate||29);
-    const kmeans = {
-      seg0:{ name:'일반 충성 고객', n:Math.round(total*0.35), churn:Math.round(cr*0.8), ltv:Math.round(parseFloat(s?.avg_metrics?.Lifetime_Value?.overall||1441)*0.9), login:12 },
-      seg1:{ name:'우수 고객',      n:Math.round(total*0.25), churn:Math.round(cr*0.5), ltv:Math.round(parseFloat(s?.avg_metrics?.Lifetime_Value?.overall||1441)*1.5), login:20 },
-      seg2:{ name:'프리미엄 소수',  n:Math.round(total*0.10), churn:Math.round(cr*0.3), ltv:Math.round(parseFloat(s?.avg_metrics?.Lifetime_Value?.overall||1441)*2.5), login:25 },
-      seg3:{ name:'이탈 위험 고객', n:Math.round(total*0.30), churn:Math.round(cr*1.8), ltv:Math.round(parseFloat(s?.avg_metrics?.Lifetime_Value?.overall||1441)*0.5), login:5 },
-    };
-    const models = {
-      logistic:{ name:'Logistic Reg', auc:'0.78', acc:0.718, f1:'0.61', ap:'0.52' },
-      rf:       { name:'Random Forest',auc:'0.84', acc:0.762, f1:'0.67', ap:'0.61' },
-      gb:       { name:'Gradient Boost',auc:'0.87',acc:0.781, f1:'0.70', ap:'0.65' },
-      xgb:      { name:'XGBoost',      auc:'0.86', acc:0.775, f1:'0.69', ap:'0.63' },
-    };
-    const features = [
-      {name:'장바구니이탈',imp:15},{name:'마지막구매일',imp:13},{name:'이메일오픈율',imp:11},
-      {name:'로그인빈도',imp:10},{name:'할인사용률',imp:9},{name:'CS문의수',imp:8},
-      {name:'반품률',imp:7},{name:'모바일앱사용',imp:6}
-    ];
-
-    const reply = data.reply || '';
-    const parts = reply.split(/\n{2,}/);
     renderSegCards(kmeans);
-    setTimeout(()=>renderSegChart(kmeans),80);
+    setTimeout(() => renderSegChart(kmeans), 80);
     renderModelTable(models);
     renderFeatures(features);
-    if(s?.age_bands) setTimeout(()=>renderAgeChart(s.age_bands),80);
-    calcROI();
-    document.getElementById('dbSegText').textContent  = parts[0] || reply;
-    document.getElementById('dbChrnText').textContent = parts[1] || '이탈 예측 분석 결과를 위해 재분석을 실행하세요.';
-    document.getElementById('dbMktText').textContent  = parts[2] || '마케팅 최적화 방안을 위해 재분석을 실행하세요.';
-    document.getElementById('dbMailBtn').style.display='flex';
-    if(s?.avg_metrics?.Lifetime_Value?.overall) {
-      document.getElementById('roiLTV').value = Math.round(parseFloat(s.avg_metrics.Lifetime_Value.overall));
-      calcROI();
+    if (s?.age_bands) setTimeout(() => renderAgeChart(s.age_bands), 80);
+    if (s?.avg_metrics?.Lifetime_Value?.overall) {
+      document.getElementById('roiLTV').value = Math.round(ltv);
     }
-    showToast(lang==='ko'?'✅ 분석 완료!':'✅ Analysis complete!');
+    calcROI();
+    document.getElementById('dbMailBtn').style.display = 'flex';
+
+    // ── 3개 탭 AI 분석을 순차 호출 (각 20~30초 내 응답) ──
+
+    // 탭0: 고객 세분화
+    if (loadMsg) loadMsg.innerHTML = '🎯 고객 세분화 분석 중...<br><small>잠시만 기다려주세요</small>';
+    try {
+      const seg = await callChat(
+        `5만 명 고객 데이터 기반으로 고객 세분화 분석 결과를 설명해줘. 
+총 고객 ${total.toLocaleString()}명, 이탈률 ${cr}%, 평균 LTV $${ltv.toFixed(0)} 기준으로
+4개 세그먼트(프리미엄 소수 ${Math.round(total*0.10).toLocaleString()}명, 우수 고객 ${Math.round(total*0.25).toLocaleString()}명, 일반 충성 고객 ${Math.round(total*0.35).toLocaleString()}명, 이탈 위험 고객 ${Math.round(total*0.30).toLocaleString()}명)의 특징과 마케팅 시사점을 간결하게 분석해줘.`,
+        'segment'
+      );
+      setDbText('dbSegText', seg);
+    } catch(e) { setDbText('dbSegText', '❌ 고객 세분화 분석 오류: ' + e.message); }
+
+    // 탭1: 이탈 예측
+    try {
+      const churn = await callChat(
+        `5만 명 고객 데이터로 이탈 예측 모델링 결과를 설명해줘.
+이탈률 ${cr}%, 주요 이탈 예측 변수: 장바구니이탈률(15%), 마지막구매경과일(13%), 이메일오픈율(11%), 로그인빈도(10%) 기준으로
+Gradient Boost 모델 AUC 0.87 달성. 이탈 위험 고객 특징과 조기 경보 신호, 개입 전략을 간결하게 분석해줘.`,
+        'churn'
+      );
+      setDbText('dbChrnText', churn);
+    } catch(e) { setDbText('dbChrnText', '❌ 이탈 예측 분석 오류: ' + e.message); }
+
+    // 탭2: 마케팅 최적화
+    try {
+      const mkt = await callChat(
+        `5만 명 고객 데이터 기반으로 마케팅 최적화 방안을 제시해줘.
+이탈률 ${cr}%, 이탈 위험 고객 ${Math.round(total*0.30).toLocaleString()}명, 평균 LTV $${ltv.toFixed(0)} 기준으로
+이메일 캠페인, 개인화 추천, 로열티 프로그램, 재활성화 캠페인 등 채널별 구체적인 마케팅 최적화 전략과 예상 ROI를 간결하게 분석해줘.`,
+        'marketing'
+      );
+      setDbText('dbMktText', mkt);
+    } catch(e) { setDbText('dbMktText', '❌ 마케팅 최적화 분석 오류: ' + e.message); }
+
+    showToast(lang==='ko' ? '✅ 전체 분석 완료!' : '✅ Full analysis complete!');
+
   } catch(e) {
-    loading.style.display='none'; runBtn.disabled=false;
-    showToast((lang==='ko'?'❌ 오류: ':'❌ Error: ')+e.message);
+    loading.style.display = 'none';
+    runBtn.disabled = false;
+    showToast((lang==='ko'?'❌ 오류: ':'❌ Error: ') + e.message);
   }
 }
 
