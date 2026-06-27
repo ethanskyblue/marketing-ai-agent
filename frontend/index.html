@@ -27,72 +27,61 @@
   html, body { height: 100%; font-family: 'Segoe UI','Noto Sans KR','Apple SD Gothic Neo',sans-serif;
     background: var(--surface); color: var(--text); overflow-x: hidden; }
 
-  /* ─── HOME SCREEN ─── */
+  /* ─── HOME SCREEN (이미지 기반) ─── */
   #homeScreen {
     position: fixed; inset: 0; z-index: 100;
-    background: linear-gradient(160deg,#0f1a2e 0%,#1a2a4a 50%,#0f1a2e 100%);
-    display: flex; flex-direction: column; align-items: center; justify-content: space-between;
-    padding: env(safe-area-inset-top,20px) 24px env(safe-area-inset-bottom,30px);
+    display: flex; align-items: stretch; justify-content: center;
     transition: opacity 0.4s;
+    background: #c8d4f0;
   }
   #homeScreen.hidden { opacity: 0; pointer-events: none; }
 
-  .home-header { width:100%; text-align:center; padding-top:24px; }
-  .home-title {
-    font-size: clamp(24px,7vw,32px); font-weight:800; letter-spacing:-0.5px;
-    background: linear-gradient(135deg,#fff 0%,#a0c4ff 100%);
-    -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;
-    line-height:1.2;
+  .home-bg-img {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%;
+    object-fit: cover;
+    object-position: center top;
+    display: block;
   }
-  .home-subtitle { font-size:12px; color:rgba(255,255,255,0.4); margin-top:4px; letter-spacing:0.5px; }
 
-  .hero-area { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:0; padding:20px 0; }
-
-  /* Robot */
-  .robot-wrap { position:relative; width:min(200px,52vw); height:min(200px,52vw); }
-  .robot-glow { position:absolute; inset:-20px; border-radius:50%;
-    background:radial-gradient(circle,rgba(79,142,247,0.35) 0%,transparent 70%);
-    animation:pulseGlow 3s ease-in-out infinite; }
-  @keyframes pulseGlow { 0%,100%{transform:scale(1);opacity:.7} 50%{transform:scale(1.15);opacity:1} }
-  .robot-svg { width:100%; height:100%; position:relative; z-index:1; animation:float 4s ease-in-out infinite; }
-  @keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-12px)} }
-
-  /* Orbit icons */
-  .icon-orbit { position:absolute; inset:-30px; animation:orbitSpin 8s linear infinite; }
-  .orbit-icon {
-    position:absolute; width:42px; height:42px; border-radius:12px;
-    background:rgba(255,255,255,0.1); backdrop-filter:blur(8px);
-    border:1px solid rgba(255,255,255,0.18);
-    display:flex; align-items:center; justify-content:center; font-size:20px;
-    animation:counterRotate 8s linear infinite;
+  .home-overlay {
+    position: relative; z-index: 2;
+    width: 100%; max-width: 420px;
+    display: flex; flex-direction: column;
+    align-items: center;
+    padding: env(safe-area-inset-top,14px) 24px env(safe-area-inset-bottom,36px);
   }
-  .orbit-icon:nth-child(1){top:0;left:50%;transform:translateX(-50%)}
-  .orbit-icon:nth-child(2){right:0;top:50%;transform:translateY(-50%)}
-  .orbit-icon:nth-child(3){bottom:0;left:50%;transform:translateX(-50%)}
-  .orbit-icon:nth-child(4){left:0;top:50%;transform:translateY(-50%)}
-  @keyframes orbitSpin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
-  @keyframes counterRotate{from{transform:rotate(0)}to{transform:rotate(-360deg)}}
 
-  .home-dots { display:flex; gap:6px; margin-top:22px; }
-  .home-dot { width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,0.25); }
-  .home-dot.active { background:#4f8ef7; width:24px; border-radius:4px; }
-
-  .tagline { text-align:center; padding:0 16px; margin-top:22px; }
-  .tagline p { font-size:clamp(14px,4vw,17px); font-weight:700; color:#ccdaff; line-height:1.5; }
-  .tagline .en { font-size:11px; color:rgba(255,255,255,0.35); margin-top:5px; font-weight:400; }
+  .home-spacer { flex: 1; }
 
   .start-btn {
-    width:min(320px,88%); padding:17px 32px;
-    background:linear-gradient(135deg,#38bdf8 0%,#4f8ef7 100%);
-    border:none; border-radius:50px; color:#fff;
-    font-size:18px; font-weight:800; letter-spacing:0.5px;
-    cursor:pointer; display:flex; align-items:center; justify-content:center; gap:10px;
-    box-shadow:0 8px 30px rgba(79,142,247,0.5),inset 0 1px 0 rgba(255,255,255,0.2);
-    transition:transform .15s,box-shadow .15s; margin-bottom:8px;
+    width: min(300px, 82%);
+    padding: 17px 28px;
+    background: linear-gradient(135deg, #38bdf8 0%, #4f8ef7 100%);
+    border: none; border-radius: 50px; color: #fff;
+    font-size: 18px; font-weight: 800; letter-spacing: 0.5px;
+    cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px;
+    box-shadow: 0 8px 30px rgba(79,142,247,0.55), inset 0 1px 0 rgba(255,255,255,0.25);
+    transition: transform .15s, box-shadow .15s;
+    margin-bottom: 0;
+    -webkit-tap-highlight-color: transparent;
   }
-  .start-btn:active{transform:scale(0.97);box-shadow:0 4px 15px rgba(79,142,247,0.4)}
-  .start-btn .arrow{width:28px;height:28px;background:rgba(255,255,255,0.2);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px}
-  .lang-btn-home{position:absolute;top:18px;right:18px;z-index:10;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);color:rgba(255,255,255,0.7);padding:7px 16px;border-radius:20px;font-size:12px;cursor:pointer;font-weight:500}
+  .start-btn:active { transform: scale(0.97); box-shadow: 0 4px 15px rgba(79,142,247,0.4); }
+  .start-btn .arrow {
+    width: 28px; height: 28px;
+    background: rgba(255,255,255,0.22); border-radius: 50%;
+    display: flex; align-items: center; justify-content: center; font-size: 14px;
+  }
+  .lang-btn-home {
+    align-self: flex-end;
+    background: rgba(255,255,255,0.25);
+    border: 1px solid rgba(255,255,255,0.4);
+    color: #1a1a4e;
+    padding: 7px 16px; border-radius: 20px;
+    font-size: 12px; cursor: pointer; font-weight: 600;
+    backdrop-filter: blur(6px);
+    margin-top: 10px;
+  }
 
   /* ─── MAIN APP ─── */
   #mainApp { display:none; flex-direction:column; height:100vh; }
@@ -280,58 +269,14 @@
 
 <!-- ═══ HOME SCREEN ═══ -->
 <div id="homeScreen">
-  <button class="lang-btn-home" onclick="toggleLang()">KO / EN</button>
-
-  <div class="home-header">
-    <div class="home-title">마케팅 AI 에이전트<br><span style="font-size:.65em;font-weight:500;opacity:.7">Marketing AI Agent</span></div>
+  <img src="home_image.png" class="home-bg-img" alt="마케팅 AI 에이전트" />
+  <div class="home-overlay">
+    <button class="lang-btn-home" onclick="toggleLang()">KO / EN</button>
+    <div class="home-spacer"></div>
+    <button class="start-btn" onclick="enterApp()">
+      시작하기 <div class="arrow">▶</div>
+    </button>
   </div>
-
-  <div class="hero-area">
-    <div class="robot-wrap">
-      <div class="robot-glow"></div>
-      <div class="icon-orbit">
-        <div class="orbit-icon">📊</div>
-        <div class="orbit-icon">💬</div>
-        <div class="orbit-icon">📈</div>
-        <div class="orbit-icon">🖥️</div>
-      </div>
-      <svg class="robot-svg" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <defs>
-          <radialGradient id="bg" cx="40%" cy="35%"><stop offset="0%" stop-color="#4a9eff"/><stop offset="60%" stop-color="#1a1a8e"/><stop offset="100%" stop-color="#0a0a5a"/></radialGradient>
-          <filter id="glow"><feGaussianBlur stdDeviation="3" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
-        </defs>
-        <ellipse cx="100" cy="115" rx="55" ry="55" fill="url(#bg)" filter="url(#glow)"/>
-        <ellipse cx="82" cy="95" rx="20" ry="14" fill="rgba(255,255,255,0.12)" transform="rotate(-20,82,95)"/>
-        <line x1="100" y1="60" x2="100" y2="42" stroke="#38bdf8" stroke-width="3" stroke-linecap="round"/>
-        <circle cx="100" cy="38" r="7" fill="#38bdf8" filter="url(#glow)"/>
-        <circle cx="100" cy="38" r="4" fill="#ffffff"/>
-        <ellipse cx="84" cy="108" rx="11" ry="11" fill="#0d1a3d"/>
-        <ellipse cx="116" cy="108" rx="11" ry="11" fill="#0d1a3d"/>
-        <circle cx="85" cy="109" r="6" fill="white"/>
-        <circle cx="115" cy="109" r="6" fill="white"/>
-        <circle cx="87" cy="107" r="2" fill="#1a3aff" opacity=".8"/>
-        <circle cx="117" cy="107" r="2" fill="#1a3aff" opacity=".8"/>
-        <circle cx="89" cy="105" r="1.2" fill="#fff"/>
-        <circle cx="119" cy="105" r="1.2" fill="#fff"/>
-        <path d="M88 124 Q100 134 112 124" stroke="#38bdf8" stroke-width="2.5" stroke-linecap="round" fill="none"/>
-        <ellipse cx="72" cy="120" rx="7" ry="4" fill="#ff6699" opacity=".3"/>
-        <ellipse cx="128" cy="120" rx="7" ry="4" fill="#ff6699" opacity=".3"/>
-        <ellipse cx="40" cy="130" rx="20" ry="10" fill="#2d4fdb" opacity=".6" transform="rotate(-20,40,130)"/>
-        <ellipse cx="160" cy="130" rx="20" ry="10" fill="#2d4fdb" opacity=".6" transform="rotate(20,160,130)"/>
-      </svg>
-    </div>
-    <div class="home-dots">
-      <div class="home-dot active"></div><div class="home-dot"></div><div class="home-dot"></div>
-    </div>
-    <div class="tagline">
-      <p>당신의 완벽한 마케팅 파트너,<br>AI 에이전트가 함께합니다.</p>
-      <p class="en">Your Perfect Marketing Partner,<br>AI Agent is Here for You.</p>
-    </div>
-  </div>
-
-  <button class="start-btn" onclick="enterApp()">
-    시작하기 <div class="arrow">▶</div>
-  </button>
 </div>
 
 <!-- ═══ 인터랙티브 대시보드 ═══ -->
@@ -810,7 +755,7 @@ function setDbText(id, text) {
   el.textContent = text;
 }
 
-// AI API 단건 호출 헬퍼
+// AI API 단건 호출 헬퍼 (일반 채팅용)
 async function callChat(message, analysisType) {
   const res = await fetch(`${BACKEND_URL}/api/chat`, {
     method: 'POST', headers: {'Content-Type':'application/json'},
@@ -831,17 +776,16 @@ async function runDashboard() {
   loading.style.display = 'block';
   switchTab(0);
 
-  // 분석 텍스트 초기화
   setDbText('dbSegText',  '🔄 고객 세분화 분석 중...');
   setDbText('dbChrnText', '🔄 이탈 예측 분석 중...');
   setDbText('dbMktText',  '🔄 마케팅 최적화 분석 중...');
+  if (loadMsg) loadMsg.innerHTML = '🤖 AI 3개 탭 병렬 분석 중...<br><small>약 20~30초 소요됩니다</small>';
 
-  const s     = serverStats;
+  const s   = serverStats;
   const total = s?.overview?.total || 50000;
   const cr    = parseFloat(s?.overview?.churn_rate || 29);
   const ltv   = parseFloat(s?.avg_metrics?.Lifetime_Value?.overall || 1441);
 
-  // K-Means 세그먼트 데이터
   const kmeans = {
     seg0:{ name:'일반 충성 고객', n:Math.round(total*0.35), churn:Math.round(cr*0.8),  ltv:Math.round(ltv*0.9),  login:12 },
     seg1:{ name:'우수 고객',      n:Math.round(total*0.25), churn:Math.round(cr*0.5),  ltv:Math.round(ltv*1.5),  login:20 },
@@ -861,60 +805,36 @@ async function runDashboard() {
   ];
 
   try {
-    // ── 탭 UI 먼저 표시 (분석 텍스트는 로딩 중 상태로) ──
+    // ✅ 최적화: /api/dashboard 전용 엔드포인트 사용 (캐시 + 병렬 처리)
+    const res = await fetch(`${BACKEND_URL}/api/dashboard`, {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({})
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || '대시보드 분석 실패');
+
+    // 차트·표 렌더 (즉시)
     loading.style.display = 'none';
     tabs.style.display    = 'flex';
     runBtn.disabled       = false;
-    runBtn.textContent    = '🔄 재분석';
+    runBtn.textContent    = data.cached ? '🔄 재분석 (캐시됨)' : '🔄 재분석';
 
     renderSegCards(kmeans);
     setTimeout(() => renderSegChart(kmeans), 80);
     renderModelTable(models);
     renderFeatures(features);
     if (s?.age_bands) setTimeout(() => renderAgeChart(s.age_bands), 80);
-    if (s?.avg_metrics?.Lifetime_Value?.overall) {
-      document.getElementById('roiLTV').value = Math.round(ltv);
-    }
+    if (s?.avg_metrics?.Lifetime_Value?.overall) document.getElementById('roiLTV').value = Math.round(ltv);
     calcROI();
     document.getElementById('dbMailBtn').style.display = 'flex';
 
-    // ── 3개 탭 AI 분석을 순차 호출 (각 20~30초 내 응답) ──
+    // AI 텍스트 반영
+    setDbText('dbSegText',  data.segText  || '분석 결과를 불러올 수 없습니다.');
+    setDbText('dbChrnText', data.churnText|| '분석 결과를 불러올 수 없습니다.');
+    setDbText('dbMktText',  data.mktText  || '분석 결과를 불러올 수 없습니다.');
 
-    // 탭0: 고객 세분화
-    if (loadMsg) loadMsg.innerHTML = '🎯 고객 세분화 분석 중...<br><small>잠시만 기다려주세요</small>';
-    try {
-      const seg = await callChat(
-        `5만 명 고객 데이터 기반으로 고객 세분화 분석 결과를 설명해줘. 
-총 고객 ${total.toLocaleString()}명, 이탈률 ${cr}%, 평균 LTV $${ltv.toFixed(0)} 기준으로
-4개 세그먼트(프리미엄 소수 ${Math.round(total*0.10).toLocaleString()}명, 우수 고객 ${Math.round(total*0.25).toLocaleString()}명, 일반 충성 고객 ${Math.round(total*0.35).toLocaleString()}명, 이탈 위험 고객 ${Math.round(total*0.30).toLocaleString()}명)의 특징과 마케팅 시사점을 간결하게 분석해줘.`,
-        'segment'
-      );
-      setDbText('dbSegText', seg);
-    } catch(e) { setDbText('dbSegText', '❌ 고객 세분화 분석 오류: ' + e.message); }
-
-    // 탭1: 이탈 예측
-    try {
-      const churn = await callChat(
-        `5만 명 고객 데이터로 이탈 예측 모델링 결과를 설명해줘.
-이탈률 ${cr}%, 주요 이탈 예측 변수: 장바구니이탈률(15%), 마지막구매경과일(13%), 이메일오픈율(11%), 로그인빈도(10%) 기준으로
-Gradient Boost 모델 AUC 0.87 달성. 이탈 위험 고객 특징과 조기 경보 신호, 개입 전략을 간결하게 분석해줘.`,
-        'churn'
-      );
-      setDbText('dbChrnText', churn);
-    } catch(e) { setDbText('dbChrnText', '❌ 이탈 예측 분석 오류: ' + e.message); }
-
-    // 탭2: 마케팅 최적화
-    try {
-      const mkt = await callChat(
-        `5만 명 고객 데이터 기반으로 마케팅 최적화 방안을 제시해줘.
-이탈률 ${cr}%, 이탈 위험 고객 ${Math.round(total*0.30).toLocaleString()}명, 평균 LTV $${ltv.toFixed(0)} 기준으로
-이메일 캠페인, 개인화 추천, 로열티 프로그램, 재활성화 캠페인 등 채널별 구체적인 마케팅 최적화 전략과 예상 ROI를 간결하게 분석해줘.`,
-        'marketing'
-      );
-      setDbText('dbMktText', mkt);
-    } catch(e) { setDbText('dbMktText', '❌ 마케팅 최적화 분석 오류: ' + e.message); }
-
-    showToast(lang==='ko' ? '✅ 전체 분석 완료!' : '✅ Full analysis complete!');
+    const cacheMsg = data.cached ? ' (캐시 사용 — 토큰 절약)' : '';
+    showToast(lang==='ko' ? `✅ 분석 완료!${cacheMsg}` : `✅ Analysis complete!${cacheMsg}`);
 
   } catch(e) {
     loading.style.display = 'none';
