@@ -1,11 +1,8 @@
 name: 매일 자동 재배포 (Cloudtype)
 
 on:
-  # 매일 오전 7시 (KST) = UTC 22:00 (전날)
   schedule:
     - cron: '0 22 * * *'
-
-  # 수동 실행 (GitHub Actions 탭 → Run workflow)
   workflow_dispatch:
 
 jobs:
@@ -32,7 +29,7 @@ jobs:
             name: ${{ secrets.CLOUDTYPE_SERVICE }}
             app: node@24
             options:
-              install: cd backend && npm install
+              install: npm install
               start: node backend/server.js
               port: "3000"
             context:
