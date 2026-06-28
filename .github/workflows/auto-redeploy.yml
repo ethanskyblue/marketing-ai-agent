@@ -2,7 +2,7 @@ name: 매일 자동 재배포 (Cloudtype)
 
 on:
   schedule:
-    - cron: '0 22 * * *'
+    - cron: '0 20 * * *'
   workflow_dispatch:
 
 jobs:
