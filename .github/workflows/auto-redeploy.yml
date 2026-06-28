@@ -1,0 +1,41 @@
+name: 매일 자동 재배포 (Cloudtype)
+
+on:
+  # 매일 오전 7시 (KST) = UTC 22:00 (전날)
+  schedule:
+    - cron: '0 22 * * *'
+
+  # 수동 실행 (GitHub Actions 탭 → Run workflow)
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Cloudtype 재배포
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 소스 체크아웃
+        uses: actions/checkout@v4
+
+      - name: Cloudtype 저장소 연결
+        uses: cloudtype-github-actions/connect@v1
+        with:
+          token: ${{ secrets.CLOUDTYPE_TOKEN }}
+          ghtoken: ${{ secrets.GHP_TOKEN }}
+
+      - name: Cloudtype 배포
+        uses: cloudtype-github-actions/deploy@v1
+        with:
+          token: ${{ secrets.CLOUDTYPE_TOKEN }}
+          project: ${{ secrets.CLOUDTYPE_PROJECT }}
+          yaml: |-
+            name: ${{ secrets.CLOUDTYPE_SERVICE }}
+            app: node@24
+            options:
+              install: cd backend && npm install
+              start: node backend/server.js
+              port: "3000"
+            context:
+              git:
+                ref: ${{ github.ref }}
+                url: git@github.com:${{ github.repository }}.git
