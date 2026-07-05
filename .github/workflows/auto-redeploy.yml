@@ -2,8 +2,8 @@ name: 매일 자동 재배포 (Cloudtype)
 
 on:
   schedule:
-    - cron: '20 20 * * *'
-  workflow_dispatch:
+    - cron: '20 20 * * *'  # 매일 KST 05:20 (UTC 20:20)
+  workflow_dispatch:         # 수동 실행 가능
 
 jobs:
   deploy:
@@ -25,14 +25,23 @@ jobs:
         with:
           token: ${{ secrets.CLOUDTYPE_TOKEN }}
           project: ${{ secrets.CLOUDTYPE_PROJECT }}
-          yaml: |-
+          stage: main
+          yaml: >
             name: ${{ secrets.CLOUDTYPE_SERVICE }}
             app: node@24
             options:
               install: npm install
               start: node backend/server.js
               port: "3000"
+              ports: "3000"
+              build: ""
+              env:
+                - name: ANTHROPIC_API_KEY
+                  secret: ANTHROPIC_API_KEY
+                - name: ALLOWED_ORIGINS
+                  secret: ALLOWED_ORIGINS
+              buildenv: []
             context:
               git:
-                ref: ${{ github.ref }}
                 url: git@github.com:${{ github.repository }}.git
+                ref: ${{ github.ref }}
