@@ -2,7 +2,7 @@ name: 매일 자동 재배포 (Cloudtype)
 
 on:
   schedule:
-    - cron: '20 20 * * *'  # 매일 KST 05:20 (UTC 20:20)
+    - cron: '59 23 * * *'  # 매일 KST 09:59 (UTC 19:30)
   workflow_dispatch:         # 수동 실행 가능
 
 jobs:
@@ -24,10 +24,10 @@ jobs:
         uses: cloudtype-github-actions/deploy@v1
         with:
           token: ${{ secrets.CLOUDTYPE_TOKEN }}
-          project: ${{ secrets.CLOUDTYPE_PROJECT }}
+          project: woondeog.jang/woon-ai
           stage: main
           yaml: >
-            name: ${{ secrets.CLOUDTYPE_SERVICE }}
+            name: marketing-ai-agent
             app: node@24
             options:
               install: npm install
@@ -36,10 +36,22 @@ jobs:
               ports: "3000"
               build: ""
               env:
+                - name: GMAIL_USER
+                  secret: GMAIL_USER
+                - name: GMAIL_CLIENT_ID
+                  secret: GMAIL_CLIENT_ID
+                - name: GMAIL_CLIENT_SECRET
+                  secret: GMAIL_CLIENT_SECRET
+                - name: GMAIL_REFRESH_TOKEN
+                  secret: GMAIL_REFRESH_TOKEN
                 - name: ANTHROPIC_API_KEY
                   secret: ANTHROPIC_API_KEY
+                - name: MAIL_TO
+                  value: woondeog.jang@gmail.com, wdjang@empas.com
+                - name: MAIL_FROM_NAME
+                  value: 마케팅 AI 에이전트
                 - name: ALLOWED_ORIGINS
-                  secret: ALLOWED_ORIGINS
+                  value: https://port-0-marketing-ai-agent-mqlm15dlb837dc12.sel3.cloudtype.app
               buildenv: []
             context:
               git:
