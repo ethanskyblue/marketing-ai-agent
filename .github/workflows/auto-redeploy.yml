@@ -2,7 +2,7 @@ name: 매일 자동 재배포 (Cloudtype)
 
 on:
   schedule:
-    - cron: '59 23 * * *'  # 매일 KST 09:59 (UTC 19:30)
+    - cron: '8 0 * * *'  # 매일 KST 09:59 (UTC 19:30)
   workflow_dispatch:         # 수동 실행 가능
 
 jobs:
