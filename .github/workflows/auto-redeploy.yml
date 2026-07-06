@@ -24,7 +24,7 @@ jobs:
         uses: cloudtype-github-actions/deploy@v1
         with:
           token: ${{ secrets.CLOUDTYPE_TOKEN }}
-          project: ${{ secrets.CLOUDTYPE_PROJECT }}
+          project: woondeog.jang/woon-ai
           stage: main
           yaml: >
             name: marketing-ai-agent
