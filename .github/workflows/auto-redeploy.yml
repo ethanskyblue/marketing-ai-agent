@@ -3,43 +3,42 @@ name: 매일 자동 재배포 (Cloudtype)
 on:
   schedule:
     - cron: '20 20 * * *'  # 매일 KST 05:20 (UTC 20:20)
-  workflow_dispatch:
+  workflow_dispatch:         # 수동 실행 가능
 
 jobs:
   deploy:
-    name: Cloudtype 재배포
     runs-on: ubuntu-latest
-
     steps:
-      - name: 소스 체크아웃
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Cloudtype 저장소 연결
+      - name: Connect deploy key
         uses: cloudtype-github-actions/connect@v1
         with:
           token: ${{ secrets.CLOUDTYPE_TOKEN }}
           ghtoken: ${{ secrets.GHP_TOKEN }}
 
-      - name: Cloudtype 배포
+      - name: Deploy
         uses: cloudtype-github-actions/deploy@v1
         with:
           token: ${{ secrets.CLOUDTYPE_TOKEN }}
-          project: woondeog.jang/woon-ai
+          project: woondeog-jang/woon-ai
           stage: main
           yaml: >
             name: marketing-ai-agent
+
             app: node@24
+
             options:
               install: npm install
               start: node backend/server.js
               port: "3000"
               ports: "3000"
-              build: ""
               env:
                 - name: ANTHROPIC_API_KEY
                   secret: ANTHROPIC_API_KEY
                 - name: ALLOWED_ORIGINS
-                  secret: ALLOWED_ORIGINS
+                  value: https://port-0-marketing-ai-agent-mqlm15dlb837dc12.sel3.cloudtype.app
               buildenv: []
             context:
               git:
