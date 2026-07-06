@@ -15,7 +15,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Cloudtype connect deploy key
-        uses: cloudtype-github-actions/connect@v4
+        uses: cloudtype-github-actions/connect@v1
         with:
           token: ${{ secrets.CLOUDTYPE_TOKEN }}
           ghtoken: ${{ secrets.GHP_TOKEN }}
