@@ -1,30 +1,30 @@
-name: Deploy to cloudtype
+name: 매일 자동 재배포 (Cloudtype)
 
 on:
   schedule:
-    - cron: '8 0 * * *'  # 매일 KST 09:59 (UTC 19:30)
-  workflow_dispatch:         # 수동 실행 가능
+    - cron: '20 20 * * *'  # 매일 KST 05:20 (UTC 20:20)
+  workflow_dispatch:
 
 jobs:
   deploy:
-    name: Cloudtype Redeploy
+    name: Cloudtype 재배포
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
+      - name: 소스 체크아웃
         uses: actions/checkout@v4
 
-      - name: Cloudtype connect deploy key
+      - name: Cloudtype 저장소 연결
         uses: cloudtype-github-actions/connect@v1
         with:
           token: ${{ secrets.CLOUDTYPE_TOKEN }}
           ghtoken: ${{ secrets.GHP_TOKEN }}
 
-      - name: Cloudtype Deploy
+      - name: Cloudtype 배포
         uses: cloudtype-github-actions/deploy@v1
         with:
           token: ${{ secrets.CLOUDTYPE_TOKEN }}
-          project: woondeog.jang/woon-ai
+          project: ${{ secrets.CLOUDTYPE_PROJECT }}
           stage: main
           yaml: >
             name: marketing-ai-agent
@@ -36,22 +36,10 @@ jobs:
               ports: "3000"
               build: ""
               env:
-                - name: GMAIL_USER
-                  secret: GMAIL_USER
-                - name: GMAIL_CLIENT_ID
-                  secret: GMAIL_CLIENT_ID
-                - name: GMAIL_CLIENT_SECRET
-                  secret: GMAIL_CLIENT_SECRET
-                - name: GMAIL_REFRESH_TOKEN
-                  secret: GMAIL_REFRESH_TOKEN
                 - name: ANTHROPIC_API_KEY
                   secret: ANTHROPIC_API_KEY
-                - name: MAIL_TO
-                  value: woondeog.jang@gmail.com, wdjang@empas.com
-                - name: MAIL_FROM_NAME
-                  value: 마케팅 AI 에이전트
                 - name: ALLOWED_ORIGINS
-                  value: https://port-0-marketing-ai-agent-mqlm15dlb837dc12.sel3.cloudtype.app
+                  secret: ALLOWED_ORIGINS
               buildenv: []
             context:
               git:
