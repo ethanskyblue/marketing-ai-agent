@@ -25,7 +25,7 @@ jobs:
         with:
           token: ${{ secrets.CLOUDTYPE_TOKEN }}
           project: woondeog.jang/woon-ai
-          stage: main
+          stage: master
           yaml: >
             name: marketing-ai-agent
             app: node@24
