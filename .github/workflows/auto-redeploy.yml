@@ -1,4 +1,4 @@
-name: 매일 자동 재배포 (Cloudtype)
+name: Deploy to cloudtype
 
 on:
   schedule:
@@ -7,25 +7,25 @@ on:
 
 jobs:
   deploy:
-    name: Cloudtype 재배포
+    name: Cloudtype Redeploy
     runs-on: ubuntu-latest
 
     steps:
-      - name: 소스 체크아웃
-        uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v2
 
-      - name: Cloudtype 저장소 연결
+      - name: Cloudtype connect deploy key
         uses: cloudtype-github-actions/connect@v1
         with:
           token: ${{ secrets.CLOUDTYPE_TOKEN }}
           ghtoken: ${{ secrets.GHP_TOKEN }}
 
-      - name: Cloudtype 배포
+      - name: Cloudtype Deploy
         uses: cloudtype-github-actions/deploy@v1
         with:
           token: ${{ secrets.CLOUDTYPE_TOKEN }}
           project: woondeog.jang/woon-ai
-          stage: master
+          stage: main
           yaml: >
             name: marketing-ai-agent
             app: node@24
